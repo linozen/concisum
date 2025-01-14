@@ -1,0 +1,169 @@
+{
+  "utterances": [
+    {
+      "utterance_id": "utt0",
+      "ref_text": "Ja, herzlich willkommen an der Ambulanz am Otto-Selz-Institut.",
+      "ref_spk": "1 1 1 1 1 1 1 1"
+    },
+    {
+      "utterance_id": "utt1",
+      "ref_text": "Haben Sie gut hierher gefunden?",
+      "ref_spk": "1 1 1 1 1"
+    },
+    {
+      "utterance_id": "utt2",
+      "ref_text": "Ja,",
+      "ref_spk": "1"
+    },
+    {
+      "utterance_id": "utt3",
+      "ref_text": "hab gut hergefunden, mit der Straßenbahn gefahren, war okay.",
+      "ref_spk": "2 2 2 2 2 2 2 2 2"
+    },
+    {
+      "utterance_id": "utt4",
+      "ref_text": "Okay, ja haben Sie einen längeren Anfahrtsweg, oder?",
+      "ref_spk": "1 1 1 1 1 1 1 1"
+    },
+    {
+      "utterance_id": "utt5",
+      "ref_text": "Es geht, ich komme aus der Neckarstadt.",
+      "ref_spk": "2 2 2 2 2 2 2"
+    },
+    {
+      "utterance_id": "utt6",
+      "ref_text": "Aus der Neckarstadt, das",
+      "ref_spk": "1 1 1 1"
+    },
+    {
+      "utterance_id": "utt7",
+      "ref_text": "Das ist überschaubar. Ja.",
+      "ref_spk": "1 1 1 1"
+    },
+    {
+      "utterance_id": "utt8",
+      "ref_text": "Ja, heute ist ja unser erstes Gespräch, unser erster Termin.",
+      "ref_spk": "1 1 1 1 1 1 1 1 1 1"
+    },
+    {
+      "utterance_id": "utt9",
+      "ref_text": "Ja, ich war auch ein bisschen aufgeregt.",
+      "ref_spk": "2 2 2 2 2 2 2"
+    },
+    {
+      "utterance_id": "utt10",
+      "ref_text": "Ja, das kann ich nachvollziehen, das ist, wenn man da den Schritt das erste Mal geht.",
+      "ref_spk": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+    },
+    {
+      "utterance_id": "utt11",
+      "ref_text": "Haben Sie schon Erfahrung mit Psychotherapie?",
+      "ref_spk": "1 1 1 1 1 1"
+    },
+    {
+      "utterance_id": "utt12",
+      "ref_text": "Ne, noch nie.",
+      "ref_spk": "2 2 2"
+    },
+    {
+      "utterance_id": "utt13",
+      "ref_text": "Noch nie.",
+      "ref_spk": "1 1"
+    },
+    {
+      "utterance_id": "utt14",
+      "ref_text": "Dann kann ich nachvollziehen, dass das vielleicht ein aufregender Schritt war. Ja.",
+      "ref_spk": "1 1 1 1 1 1 1 1 1 1 1 1"
+    },
+    {
+      "utterance_id": "utt15",
+      "ref_text": "Tatsächlich geht es heute darum, dass wir uns beide erst einmal ein bisschen kennenlernen.",
+      "ref_spk": "1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+    },
+    {
+      "utterance_id": "utt16",
+      "ref_text": "Ich habe tatsächlich sehr viele Fragen primär an Sie, einfach um zu gucken, was Sie hierher führt mit der Frage im Hintergrund, ob wir die richtigen Ansprechpartner sind, Ihnen zu helfen.",
+      "ref_spk": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+    },
+    {
+      "utterance_id": "utt17",
+      "ref_text": "Und gleichzeitig haben Sie wahrscheinlich auch einige Fragen an uns.",
+      "ref_spk": "1 1 1 1 1 1 1 1 1 1"
+    },
+    {
+      "utterance_id": "utt17b",
+      "ref_text": "Ja, das stimmt. ja",
+      "ref_spk": "2 2 2 2"
+    },
+    {
+      "utterance_id": "utt18",
+      "ref_text": "Da Können Sie diese dann auch gerne stellen.",
+      "ref_spk": "1 1 1 1 1 1 1 1"
+    },
+    {
+      "utterance_id": "utt18a",
+      "ref_text": "Super",
+      "ref_spk": " 2"
+    },
+    {
+      "utterance_id": "utt19",
+      "ref_text": "Ja, Bevor ich mit meinen vielen Fragen loslege, haben Sie erstmal Fragen an mich oder an den Ablauf der heutigen Stunde?",
+      "ref_spk": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+    },
+    {
+      "utterance_id": "utt20",
+      "ref_text": "Ja, also ich habe natürlich schon viele Fragen.",
+      "ref_spk": "2 2 2 2 2 2 2 2"
+    },
+    {
+      "utterance_id": "utt21",
+      "ref_text": "Ich weiß ja gar nicht so genau, wie das funktioniert mit Psychotherapie.",
+      "ref_spk": "2 2 2 2 2 2 2 2 2 2 2 2"
+    },
+    {
+      "utterance_id": "utt22",
+      "ref_text": "Ich weiß auch gar nicht, wie das mit der Krankenkasse läuft, ob die jetzt dafür zahlt zum Beispiel.",
+      "ref_spk": "2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2"
+    },
+    {
+      "utterance_id": "utt22a",
+      "ref_text": "Ja",
+      "ref_spk": "1"
+    },
+    {
+      "utterance_id": "utt23",
+      "ref_text": "Wie lange ich das machen kann und wie viele, ja genau, wie viele Stunden das dann beinhalten würde",
+      "ref_spk": "2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2"
+    },
+    {
+      "utterance_id": "utt24",
+      "ref_text": "Und was zum Beispiel passiert, wenn ich eine Stunde  absagen muss?",
+      "ref_spk": "2 2 2 2 2 2 2 2 2 2 2"
+    },
+    {
+      "utterance_id": "utt25",
+      "ref_text": "Kurzfristig.",
+      "ref_spk": "2"
+    },
+    {
+      "utterance_id": "utt26",
+      "ref_text": "All das wären so Sachen, die ich glaube ich wissen müsste, bevor wir loslegen können.",
+      "ref_spk": "2 2 2 2 2 2 2 2 2 2 2 2 2 2 2"
+    },
+    {
+      "utterance_id": "utt27",
+      "ref_text": "Gut. Ich glaube vieles von dem, was Sie angesprochen haben, führt uns auch das Gespräch tatsächlich hin.",
+      "ref_spk": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+    },
+    {
+      "utterance_id": "utt28",
+      "ref_text": "Von dem her",
+      "ref_spk": "1 1 1"
+    },
+    {
+      "utterance_id": "utt29",
+      "ref_text": "Aber gut, dass sie sich die Fragen schon gestellt haben.",
+      "ref_spk": "1 1 1 1 1 1 1 1 1 1"
+    }
+  ]
+}
