@@ -1,8 +1,10 @@
 import logging
 import json
 from pathlib import Path
-from typing import List, Dict
-from verbatim.transcript.words import Utterance
+from re import I
+from typing import List, Dict, Optional
+
+from .models import Utterance
 
 LOG = logging.getLogger(__name__)
 
@@ -41,7 +43,7 @@ def load_json_transcript(file_path: str | Path) -> List[Utterance]:
     for utt in data["utterances"]:
         try:
             # Get the most common speaker ID from hyp_spk
-            speaker_ids = utt.get("hyp_spk", "").split()
+            speaker_ids = (utt.get("hyp_spk", "") or utt.get("ref_spk", "")).split()
             speaker = (
                 max(set(speaker_ids), key=speaker_ids.count)
                 if speaker_ids
@@ -49,10 +51,8 @@ def load_json_transcript(file_path: str | Path) -> List[Utterance]:
             )
 
             utterance = Utterance(
-                text=utt.get("hyp_text", ""),
+                text=(utt.get("hyp_text", "") or utt.get("ref_text", "")),
                 speaker=speaker,
-                start_ts=0,  # No timing information in JSON
-                end_ts=0,
             )
             utterances.append(utterance)
         except Exception as e:
@@ -79,27 +79,6 @@ def prepare_transcript_text(utterances: List[Utterance]) -> str:
     return "\n".join(transcript_lines)
 
 
-def create_prompt(transcript_text: str, system_prompt: str) -> List[Dict[str, str]]:
-    """Create a formatted prompt for the model.
-
-    Args:
-        transcript_text: Prepared transcript text
-        system_prompt: System prompt for the model
-
-    Returns:
-        List of message dictionaries
-    """
-    return [
-        {"role": "system", "content": system_prompt},
-        {
-            "role": "user",
-            "content": f"""Bitte analysiere folgendes Therapiegespräch und
-            erstelle eine kurze Zusammenfassung sowie eine
-            ICD-10-Diagnose:\n\n{transcript_text}""",
-        },
-    ]
-
-
 def save_as_markdown(summary: dict, output_path: Path) -> None:
     """Save the summary and diagnosis as a formatted markdown file.
 
@@ -119,8 +98,23 @@ def save_as_markdown(summary: dict, output_path: Path) -> None:
 {summary['icd-10-justification']}
 
 ---
-*Generiert mit Verbatim Summary Tool*
+*Generiert mit Concisum*
 """
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(markdown_content)
+
+
+def format_conversation_for_display(
+    transcript_text: str,
+    system_prompt: str,
+    user_prompt: str,
+) -> str:
+    """Format the conversation elements for display."""
+    prompt = user_prompt + transcript_text
+
+    return f"""[bold cyan]System Prompt:[/bold cyan]
+{system_prompt}
+
+[bold cyan]User Prompt:[/bold cyan]
+{prompt}"""

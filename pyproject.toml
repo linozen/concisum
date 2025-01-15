@@ -5,11 +5,13 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "pydantic-ai-slim[openai]>=0.0.18",
+    "openai>=1.59.7",
+    "pydantic>=2.10.5",
+    "typer>=0.15.1",
 ]
 
 [project.scripts]
-verbatim = "conciusm.cli:main"
+concisum = "concisum.cli:main"
 
 [build-system]
 requires = ["hatchling"]

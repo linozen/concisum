@@ -173,3 +173,6 @@ cython_debug/
 
 # Mac OS X
 .DS_Store
+
+# project-specific
+tests/data/private
