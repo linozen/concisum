@@ -171,6 +171,9 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
+# ruff
+.ruff_cache
+
 # Mac OS X
 .DS_Store
 
