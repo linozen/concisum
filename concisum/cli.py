@@ -3,30 +3,36 @@ import sys
 import traceback
 from pathlib import Path
 from typing import Optional
+import asyncio
 
 import typer
+from pydantic_ai.providers.openai import OpenAIProvider
+from pydantic_ai.models.openai import OpenAIModel
 from rich.console import Console
 from rich.panel import Panel
 
-from concisum.summarizer import SYSTEM_PROMPT, USER_PROMPT, TranscriptSummarizer
-from concisum.utils import (
-    load_json_transcript,
-    save_as_markdown,
-    format_conversation_for_display,
-    prepare_transcript_text,
-)
+from concisum.load_json import load_utterances_from_json
+from concisum.summary.agents import TranscriptSummarizer
+from concisum.summary.models import FullSummary
 
+
+# Setup logging
 LOG = logging.getLogger(__name__)
-console = Console()
-app = typer.Typer(
-    help="Summarize therapy transcripts using LLM and generate ICD-10 diagnoses"
-)
 
 
 def setup_logging(verbose: bool):
     """Configure logging based on verbosity level."""
     level = logging.DEBUG if verbose else logging.INFO
     logging.basicConfig(level=level)
+
+
+# Setup rich
+console = Console()
+
+# Setup typer
+app = typer.Typer(
+    help="Summarize therapy transcripts using LLM and generate ICD-10 diagnoses"
+)
 
 
 def validate_input_file(input_file: Path) -> None:
@@ -40,22 +46,44 @@ def validate_input_file(input_file: Path) -> None:
         raise typer.Exit(code=1)
 
 
-def print_summary(summary: dict):
-    """Print summary to console in a formatted way."""
-    console.print(
-        Panel.fit(
-            f"""[bold blue]Zusammenfassung:[/bold blue]
-{summary['summary']}
+async def summarize_transcript(input_file: Path) -> FullSummary:
+    """
+    Summarize a transcript file using hierarchical processing.
 
-[bold blue]ICD-10 Diagnose:[/bold blue]
-{summary['icd-10-diagnosis']}
+    Args:
+        input_file: Path to the input JSON transcript file
 
-[bold blue]ICD-10 Begründung:[/bold blue]
-{summary['icd-10-justification']}""",
-            title="Therapiegespräch Analyse",
-            border_style="cyan",
-        )
-    )
+    Returns:
+        FullSummary object containing the complete transcript summary
+    """
+    # Load utterances from JSON file
+    utterance_list = load_utterances_from_json(input_file)
+
+    # Initialize the transcript summarizer
+    summarizer = TranscriptSummarizer(chunk_size=50, therapist_speaker_number=1)  # Configurable chunk size
+
+    # Process the transcript through hierarchical summarization
+    full_summary = await summarizer.process_transcript(utterance_list)
+    return full_summary
+
+
+def save_as_markdown(summary: FullSummary, output_path: Path) -> None:
+    """
+    Save the summary as a markdown file.
+
+    Args:
+        summary: FullSummary object containing the summary content
+        output_path: Path where the markdown file should be saved
+    """
+    markdown_content = f"""# Therapiesitzung Zusammenfassung
+
+{summary.content}
+"""
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(markdown_content)
+
+    console.print(f"[green]Summary saved to:[/green] {output_path}")
 
 
 @app.command()
@@ -72,17 +100,6 @@ def summarize(
         "--output",
         "-o",
         help="Path to output markdown file (default: input_summary.md)",
-    ),
-    model: str = typer.Option(
-        "mistral-nemo", "--model", "-m", help="Set model name (Ollama)"
-    ),
-    temperature: float = typer.Option(
-        0.3,
-        "--temperature",
-        "-t",
-        help="Temperature for generation",
-        min=0.0,
-        max=1.0,
     ),
     verbose: bool = typer.Option(
         False,
@@ -106,48 +123,33 @@ def summarize(
 
         # Read input file
         with console.status("[bold green]Reading transcript...[/bold green]"):
-            utterances = load_json_transcript(str(input_file))
+            utterances = load_utterances_from_json(input_file)
+            if verbose:
+                console.print(f"Loaded {len(utterances.utterances)} utterances")
 
         if not utterances:
             console.print("[red]Error:[/red] No utterances found in input file")
             raise typer.Exit(code=1)
 
-        # Prepare transcript text
-        transcript_text = prepare_transcript_text(utterances)
-
-        # If verbose, show the prompts
-        if verbose:
-            console.print("\n[bold purple]Input Details:[/bold purple]")
-            console.print(
-                Panel(
-                    format_conversation_for_display(
-                        transcript_text=transcript_text,
-                        system_prompt=SYSTEM_PROMPT,
-                        user_prompt=USER_PROMPT,
-                    ),
-                    title="Conversation Setup",
-                    border_style="blue",
-                )
-            )
-            console.print()  # Add blank line for spacing
-
-        # Initialize summarizer and generate summary
-        summarizer = TranscriptSummarizer(
-            model=model,
-            temperature=temperature,
-        )
-
         with console.status(
-            "[bold green]Generating summary and diagnosis...[/bold green]"
+            "[bold green]Generating summary and diagnosis through hierarchical processing...[/bold green]"
         ):
-            summary = summarizer.summarize(utterances)
+            # This would need to run async summarization function
+            summary = asyncio.run(summarize_transcript(input_file))
 
         # Save results
         save_as_markdown(summary, output_path)
-        console.print(f"[green]Summary saved to:[/green] {output_path}")
 
-        # Print summary to console
-        print_summary(summary)
+        # Display summary preview
+        console.print(
+            Panel(
+                summary.content[:500] + "..."
+                if len(summary.content) > 500
+                else summary.content,
+                title="Vorschau",
+                border_style="green",
+            )
+        )
 
     except Exception as e:
         console.print(f"[red]Error:[/red] {str(e)}")
