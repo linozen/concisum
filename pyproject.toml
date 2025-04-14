@@ -7,6 +7,7 @@ requires-python = ">=3.11"
 dependencies = [
     "openai>=1.59.7",
     "pydantic>=2.10.5",
+    "pydantic-ai>=0.0.53",
     "typer>=0.15.1",
 ]
 
@@ -23,3 +24,8 @@ include = ["concisum/**/*"]
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+]
