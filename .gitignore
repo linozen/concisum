@@ -177,5 +177,6 @@ cython_debug/
 # Mac OS X
 .DS_Store
 
-# project-specific
-tests/data/private
+# ignore everything in folders called 'private' anywhere in the project
+**/private/
+private/
