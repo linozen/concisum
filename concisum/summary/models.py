@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional, Any
 
 
 class Utterance(BaseModel):
@@ -28,4 +28,12 @@ class FullSummary(BaseModel):
 
     content: str = Field(
         description="Der Inhalt der Zusammenfassung des kompletten Transkripts",
+    )
+    diagnosis: Optional[Any] = Field(
+        description="Die diagnostische Einschätzung basierend auf dem Transkript",
+        default=None
+    )
+    symptoms: Optional[Any] = Field(
+        description="Liste der identifizierten Symptome aus dem Transkript",
+        default=None
     )

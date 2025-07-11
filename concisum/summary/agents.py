@@ -1,9 +1,7 @@
 import logging
-import math
 from typing import List
 
-from pydantic_ai import Agent, RunContext
-from pydantic_ai.messages import ModelMessage
+from pydantic_ai import Agent
 
 from concisum.summary.models import Utterance, UtteranceList, ChunkSummary, FullSummary
 from concisum.config import model
@@ -13,10 +11,10 @@ LOG = logging.getLogger(__name__)
 # Agent for summarizing individual chunks of transcript text
 chunk_summarizer = Agent(
     model,
-    result_type=ChunkSummary,
+    output_type=ChunkSummary,
     system_prompt=(
         "Du bist ein Experte für die Zusammenfassung von psychotherapeutischen Sitzungen. "
-        "Deine Aufgabe ist es, Teile eines Therapietranskripts zusammenzufassen. "
+        "Deine Aufgabe ist es, Abschnitte eines Therapietranskripts zusammenzufassen. "
         "Konzentriere dich auf die wichtigsten Inhalte, Themen und Interventionen. "
         "Behalte wichtige Gefühle, Gedanken und Verhaltensweisen bei. "
         "Verfasse die Zusammenfassung auf Deutsch in der dritten Person und in einem professionellen Ton. "
@@ -27,7 +25,7 @@ chunk_summarizer = Agent(
 # Agent for creating a comprehensive summary from individual chunk summaries
 full_summarizer = Agent(
     model,
-    result_type=FullSummary,
+    output_type=FullSummary,
     system_prompt=(
         "Du bist ein Experte für die Zusammenfassung von psychotherapeutischen Sitzungen. "
         "Deine Aufgabe ist es, mehrere Teilzusammenfassungen zu einer kohärenten Gesamtzusammenfassung "
@@ -40,21 +38,37 @@ full_summarizer = Agent(
 )
 
 
-class TranscriptSummarizer:
+class SummaryOrchestrator:
     """
     Orchestrates the hierarchical summarization process for therapy transcripts.
     """
 
-    def __init__(self, chunk_size: int = 20, therapist_speaker_number: int = 0):
+    def __init__(
+        self,
+        chunk_size: int = 20,
+        therapist_speaker_number: int = 0,
+        generate_diagnosis: bool = False,
+        use_rag: bool = True,
+    ):
         """
         Initialize the summarizer with configurable chunk size.
 
         Args:
             chunk_size: Number of utterances per chunk
             therapist_speaker_number: Number of the speaker who is the therapist
+            generate_diagnosis: Whether to generate a diagnosis alongside the summary
+            use_rag: Whether to use the vector database (RAG) for diagnosis generation
         """
         self.chunk_size = chunk_size
         self.therapist_speaker_number = therapist_speaker_number
+        self.generate_diagnosis = generate_diagnosis
+        self.use_rag = use_rag
+
+        # Import here to avoid circular imports
+        if self.generate_diagnosis:
+            from concisum.diagnosis.agents import DiagnosisOrchestrator
+
+            self.diagnosis_orchestrator = DiagnosisOrchestrator(use_rag=self.use_rag)
 
     def _create_chunks(self, utterances: List[Utterance]) -> List[List[Utterance]]:
         """
@@ -108,7 +122,7 @@ class TranscriptSummarizer:
         )
 
         result = await chunk_summarizer.run(prompt)
-        return result.data
+        return result.output
 
     async def summarize_full_transcript(
         self, chunk_summaries: List[ChunkSummary]
@@ -131,28 +145,30 @@ class TranscriptSummarizer:
 
         prompt = (
             "Erstelle eine zusammenhängende deutsche Gesamtzusammenfassung aus den folgenden "
-            "Teilzusammenfassungen einer psychotherapeutischen Sitzung. "
+            "Teilzusammenfassungen einer psychotherapeutischen Sitzung. Achte darauf, dass du "
+            "konsequent genderst. Schreibe also IMMER 'die Klient*in' und die 'Therapeut*in'. "
             "Die Zusammenfassung MUSS weniger als 250 Wörter enthalten:\n\n"
             f"{combined_summaries}"
         )
 
         print(prompt)
-
         result = await full_summarizer.run(prompt)
 
         # Verify word count and try again if necessary
-        words = result.data.content.split()
+        words = result.output.content.split()
         if len(words) > 250:
-            LOG.warning(f"Summary too long ({len(words)} words). Requesting shorter version.")
+            LOG.warning(
+                f"Summary too long ({len(words)} words). Requesting shorter version."
+            )
             prompt = (
                 "Erstelle eine kürzere Zusammenfassung der psychotherapeutischen Sitzung "
                 "mit MAXIMAL 250 Wörtern. Die aktuelle Zusammenfassung hat {len(words)} Wörter "
                 "und ist zu lang:\n\n"
-                f"{result.data.content}"
+                f"{result.output.content}"
             )
             result = await full_summarizer.run(prompt)
 
-        return result.data
+        return result.output
 
     async def process_transcript(self, utterance_list: UtteranceList) -> FullSummary:
         """
@@ -175,5 +191,15 @@ class TranscriptSummarizer:
 
         # Create comprehensive summary from chunk summaries
         full_summary = await self.summarize_full_transcript(chunk_summaries)
+
+        # Generate diagnosis if requested
+        if self.generate_diagnosis:
+            LOG.info("Generating diagnosis from transcript...")
+            diagnosis_results = await self.diagnosis_orchestrator.process_transcript(
+                chunks
+            )
+            full_summary.diagnosis = diagnosis_results.get("diagnosis")
+            full_summary.symptoms = diagnosis_results.get("symptoms")
+            LOG.info("Diagnosis generation complete")
 
         return full_summary

@@ -3,7 +3,7 @@ import os
 import pytest
 
 from concisum.load_json import parse_utterance_list, load_utterances_from_json
-from concisum.summary.models import Utterance, UtteranceList
+from concisum.summary.models import UtteranceList
 
 
 def get_test_file_path(filename):
@@ -24,15 +24,24 @@ class TestLoadJSON:
         assert len(result.utterances) == 33
 
         # Check first utterance
-        assert result.utterances[0].text == "Ja, herzlich willkommen an der Ambulanz am Otto-Selz-Institut."
+        assert (
+            result.utterances[0].text
+            == "Ja, herzlich willkommen an der Ambulanz am Otto-Selz-Institut."
+        )
         assert result.utterances[0].speaker == "1"
 
         # Check a middle utterance
-        assert result.utterances[15].text == "Tatsächlich geht es heute darum, dass wir uns beide erst einmal ein bisschen kennenlernen."
+        assert (
+            result.utterances[15].text
+            == "Tatsächlich geht es heute darum, dass wir uns beide erst einmal ein bisschen kennenlernen."
+        )
         assert result.utterances[15].speaker == "1"
 
         # Check last utterance
-        assert result.utterances[-1].text == "Aber gut, dass sie sich die Fragen schon gestellt haben."
+        assert (
+            result.utterances[-1].text
+            == "Aber gut, dass sie sich die Fragen schon gestellt haben."
+        )
         assert result.utterances[-1].speaker == "1"
 
     def test_parse_utterance_list_whisper_format(self):
@@ -103,14 +112,14 @@ class TestLoadJSON:
         """Test handling of JSON with missing fields"""
         # Create a JSON file with incomplete utterance data
         missing_fields_file = tmp_path / "missing_fields.json"
-        missing_fields_file.write_text('''
+        missing_fields_file.write_text("""
         {
             "utterances": [
                 {"id": "utt1"},
                 {"ref_text": "Hello", "something_else": "value"}
             ]
         }
-        ''')
+        """)
 
         result = parse_utterance_list(str(missing_fields_file))
         assert isinstance(result, UtteranceList)
