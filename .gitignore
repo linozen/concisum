@@ -180,3 +180,7 @@ cython_debug/
 # ignore everything in folders called 'private' anywhere in the project
 **/private/
 private/
+
+# private for now
+sources
+logs
