@@ -1,18 +1,15 @@
 import logging
-import sys
 import traceback
 from pathlib import Path
 from typing import Optional
 import asyncio
 
 import typer
-from pydantic_ai.providers.openai import OpenAIProvider
-from pydantic_ai.models.openai import OpenAIModel
 from rich.console import Console
 from rich.panel import Panel
 
 from concisum.load_json import load_utterances_from_json
-from concisum.summary.agents import TranscriptSummarizer
+from concisum.summary.agents import SummaryOrchestrator
 from concisum.summary.models import FullSummary
 
 
@@ -46,12 +43,16 @@ def validate_input_file(input_file: Path) -> None:
         raise typer.Exit(code=1)
 
 
-async def summarize_transcript(input_file: Path) -> FullSummary:
+async def summarize_transcript(
+    input_file: Path, with_diagnosis: bool = False, use_rag: bool = True
+) -> FullSummary:
     """
     Summarize a transcript file using hierarchical processing.
 
     Args:
         input_file: Path to the input JSON transcript file
+        with_diagnosis: Whether to include diagnosis generation
+        use_rag: Whether to use the vector database (RAG) for diagnosis generation
 
     Returns:
         FullSummary object containing the complete transcript summary
@@ -60,7 +61,12 @@ async def summarize_transcript(input_file: Path) -> FullSummary:
     utterance_list = load_utterances_from_json(input_file)
 
     # Initialize the transcript summarizer
-    summarizer = TranscriptSummarizer(chunk_size=50, therapist_speaker_number=1)  # Configurable chunk size
+    summarizer = SummaryOrchestrator(
+        chunk_size=50,
+        therapist_speaker_number=1,
+        generate_diagnosis=with_diagnosis,
+        use_rag=use_rag,
+    )  # Configurable chunk size
 
     # Process the transcript through hierarchical summarization
     full_summary = await summarizer.process_transcript(utterance_list)
@@ -79,6 +85,30 @@ def save_as_markdown(summary: FullSummary, output_path: Path) -> None:
 
 {summary.content}
 """
+
+    # Add diagnosis information if available
+    if summary.diagnosis:
+        markdown_content += f"""
+
+## Diagnose
+
+### ICD-10 Diagnose
+{summary.diagnosis.icd_10_diagnose}
+
+### Begründung
+{summary.diagnosis.icd_10_begruendung}
+
+### Diagnosesicherheit
+{summary.diagnosis.icd_10_sicherheit:.2f}
+"""
+
+    # Add symptoms if available
+    if summary.symptoms and summary.symptoms.symptoms:
+        markdown_content += "\n\n## Identifizierte Symptome\n"
+        for symptom in summary.symptoms.symptoms:
+            markdown_content += f"\n### {symptom.name}\n"
+            markdown_content += f"**Beschreibung:** {symptom.description}\n\n"
+            markdown_content += f"**Belege:** {symptom.evidence}\n"
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(markdown_content)
@@ -100,6 +130,17 @@ def summarize(
         "--output",
         "-o",
         help="Path to output markdown file (default: input_summary.md)",
+    ),
+    with_diagnosis: bool = typer.Option(
+        False,
+        "--diagnosis",
+        "-d",
+        help="Generate ICD-10 diagnosis from transcript",
+    ),
+    no_rag: bool = typer.Option(
+        False,
+        "--no-rag",
+        help="Disable the use of the vector database (RAG) for diagnosis generation",
     ),
     verbose: bool = typer.Option(
         False,
@@ -134,8 +175,12 @@ def summarize(
         with console.status(
             "[bold green]Generating summary and diagnosis through hierarchical processing...[/bold green]"
         ):
-            # This would need to run async summarization function
-            summary = asyncio.run(summarize_transcript(input_file))
+            # Run async summarization function with diagnosis if requested
+            summary = asyncio.run(
+                summarize_transcript(
+                    input_file, with_diagnosis=with_diagnosis, use_rag=not no_rag
+                )
+            )
 
         # Save results
         save_as_markdown(summary, output_path)
