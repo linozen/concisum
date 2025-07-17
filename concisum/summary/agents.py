@@ -14,7 +14,8 @@ chunk_summarizer = Agent(
     output_type=ChunkSummary,
     system_prompt=(
         "Du bist ein Experte für die Zusammenfassung von psychotherapeutischen Sitzungen. "
-        "Deine Aufgabe ist es, Abschnitte eines Therapietranskripts zusammenzufassen. "
+        "Deine Aufgabe ist es, Abschnitte eines Therapietranskripts zwischen "
+        "exakt EINER Therapeut*in und exakt EINER Klient*in zusammenzufassen. "
         "Konzentriere dich auf die wichtigsten Inhalte, Themen und Interventionen. "
         "Behalte wichtige Gefühle, Gedanken und Verhaltensweisen bei. "
         "Verfasse die Zusammenfassung auf Deutsch in der dritten Person und in einem professionellen Ton. "
@@ -146,8 +147,9 @@ class SummaryOrchestrator:
         prompt = (
             "Erstelle eine zusammenhängende deutsche Gesamtzusammenfassung aus den folgenden "
             "Teilzusammenfassungen einer psychotherapeutischen Sitzung. Achte darauf, dass du "
-            "konsequent genderst. Schreibe also IMMER 'die Klient*in' und die 'Therapeut*in'. "
-            "Die Zusammenfassung MUSS weniger als 250 Wörter enthalten:\n\n"
+            "konsequent genderst. Schreibe also IMMER 'die Klient*in' und 'die Therapeut*in'. "
+            "Es gibt max. 1 Therapeut*in und max. 1 Klient*in."
+            "Die Zusammenfassung MUSS weniger als 300 Wörter enthalten:\n\n"
             f"{combined_summaries}"
         )
 
@@ -156,13 +158,16 @@ class SummaryOrchestrator:
 
         # Verify word count and try again if necessary
         words = result.output.content.split()
-        if len(words) > 250:
+        if len(words) > 300:
             LOG.warning(
                 f"Summary too long ({len(words)} words). Requesting shorter version."
             )
             prompt = (
-                "Erstelle eine kürzere Zusammenfassung der psychotherapeutischen Sitzung "
-                "mit MAXIMAL 250 Wörtern. Die aktuelle Zusammenfassung hat {len(words)} Wörter "
+                "Erstelle eine kürzere Zusammenfassung der psychotherapeutischen Sitzung zwischen "
+                "EINER Klient*in und EINER Therapeut*in. Nutze immer"
+                "gendersensible Sprache und gehe immer nur von diesen beiden"
+                "Gesprächspartner:innen aus."
+                "Die Zusammenfassung darm MAXIMAL 300 Wörter enthalten. Die aktuelle Zusammenfassung hat {len(words)} Wörter "
                 "und ist zu lang:\n\n"
                 f"{result.output.content}"
             )

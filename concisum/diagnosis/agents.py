@@ -34,7 +34,7 @@ diagnosis_generator = Agent(
         "zu stellen. Überprüfe systematisch alle Diagnosekriterien und begründe deine Entscheidung fachlich korrekt. "
         "Gib die vollständige ICD-10-Diagnose mit Code, Bezeichnung und ggf. Schweregrad an. Bei Komorbiditäten "
         "nenne auch Nebendiagnosen. Berücksichtige die bereitgestellten Referenzinformationen zu ICD-10-Diagnosen, "
-        "um eine genaue und evidenzbasierte Diagnose zu erstellen."
+        "um eine genaue und evidenzbasierte Diagnose zu erstellen. Stelle max. 3 Diagnosen."
     ),
 )
 
