@@ -184,3 +184,6 @@ private/
 # private for now
 sources
 logs
+
+# Vector database
+data/icd10_db/
