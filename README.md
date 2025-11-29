@@ -78,7 +78,9 @@ uv sync
 python scripts/init_vectorstore.py
 ```
 
-This will populate the vector database with sample ICD-10 F-codes (mental disorders). The database is stored locally in `data/icd10_db/` and uses ChromaDB with sentence-transformers for privacy-preserving, local embeddings.
+This will populate the vector database with sample ICD-10 F-codes (mental disorders). The database is stored locally in `data/icd10_db/` and uses ChromaDB's default ONNX-based embeddings (all-MiniLM-L6-v2, ~50MB) for lightweight, privacy-preserving operation without requiring PyTorch.
+
+**Note**: On first run, ChromaDB will download the embedding model (~50MB) from Hugging Face. This is a one-time download and requires internet access.
 
 ## Configuration
 
@@ -203,7 +205,9 @@ The tool uses a hierarchical approach with hybrid RAG + agentic architecture:
 
 The diagnosis system uses **pydantic-ai agents with RAG tools**:
 
-- **Vector Store**: ChromaDB with sentence-transformers (local, privacy-preserving)
+- **Vector Store**: ChromaDB with ONNX-based embeddings (all-MiniLM-L6-v2, ~50MB)
+  - No PyTorch dependency (lightweight deployment)
+  - Local, privacy-preserving operation
 - **Agent Tools**:
   - `search_icd10_by_symptoms`: Semantic search over diagnostic criteria
   - `get_icd10_criteria`: Exact lookup of specific ICD-10 codes

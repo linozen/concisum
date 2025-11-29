@@ -9,7 +9,6 @@ dependencies = [
     "openai>=1.59.7",
     "pydantic>=2.10.5",
     "pydantic-ai>=0.1.1",
-    "sentence-transformers>=2.2.2",
     "typer>=0.15.1",
 ]
 

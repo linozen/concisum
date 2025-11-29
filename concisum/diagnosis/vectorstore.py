@@ -50,10 +50,14 @@ class ICD10VectorStore:
             settings=Settings(anonymized_telemetry=False),
         )
 
-        # Get or create collection with sentence-transformers embedding
+        # Get or create collection with default embedding function
+        # ChromaDB uses "all-MiniLM-L6-v2" via ONNX Runtime by default (lightweight, no PyTorch)
         self.collection = self.client.get_or_create_collection(
             name="icd10_f_codes",
-            metadata={"description": "ICD-10 Chapter V (F00-F99) diagnostic criteria"},
+            metadata={
+                "description": "ICD-10 Chapter V (F00-F99) diagnostic criteria",
+                "embedding_function": "default",  # ONNX-based, ~50MB vs 3GB PyTorch
+            },
         )
 
         logger.info(
