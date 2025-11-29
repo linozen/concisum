@@ -73,6 +73,15 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 uv sync
 ```
 
+4. Initialize the ICD-10 vector database (required for RAG-enhanced diagnosis):
+```bash
+python scripts/init_vectorstore.py
+```
+
+This will populate the vector database with sample ICD-10 F-codes (mental disorders). The database is stored locally in `data/icd10_db/` and uses ChromaDB's default ONNX-based embeddings (all-MiniLM-L6-v2, ~50MB) for lightweight, privacy-preserving operation without requiring PyTorch.
+
+**Note**: On first run, ChromaDB will download the embedding model (~50MB) from Hugging Face. This is a one-time download and requires internet access.
+
 ## Configuration
 
 The tool expects an Ollama-compatible endpoint. By default, it's configured to use:
@@ -181,20 +190,37 @@ F32.1 - Mittelgradige depressive Episode
 
 ## Architecture
 
-The tool uses a hierarchical approach to handle long transcripts:
+The tool uses a hierarchical approach with hybrid RAG + agentic architecture:
 
 1. **Chunking**: Splits transcript into manageable chunks (default: 50 utterances)
 2. **Chunk Summarization**: Each chunk is summarized independently
 3. **Summary Aggregation**: Chunk summaries are combined into a final summary
 4. **Symptom Extraction**: (Optional) Symptoms are extracted from chunks in parallel
-5. **Diagnosis Generation**: (Optional) ICD-10 diagnosis based on aggregated symptoms
+5. **RAG-Enhanced Diagnosis**: (Optional) Agents use tools to search ICD-10 vector database
+   - Semantic search for candidate diagnoses based on symptoms
+   - Exact criteria lookup for validation
+   - Tool-augmented agents make diagnosis decisions based on retrieved evidence
+
+### RAG Implementation Details
+
+The diagnosis system uses **pydantic-ai agents with RAG tools**:
+
+- **Vector Store**: ChromaDB with ONNX-based embeddings (all-MiniLM-L6-v2, ~50MB)
+  - No PyTorch dependency (lightweight deployment)
+  - Local, privacy-preserving operation
+- **Agent Tools**:
+  - `search_icd10_by_symptoms`: Semantic search over diagnostic criteria
+  - `get_icd10_criteria`: Exact lookup of specific ICD-10 codes
+- **Hybrid Approach**: Agents autonomously decide when to use tools vs. parametric knowledge
+- **Graceful Degradation**: Falls back to non-RAG mode if vector database unavailable
 
 ## Future Features
 
-- **RAG-based Diagnosis Enhancement**: Integration with a vector database containing ICD-10 reference materials to improve diagnostic accuracy (placeholder code exists but not yet implemented)
+- **Expanded ICD-10 Database**: Add full ICD-10 coverage beyond sample F-codes
 - **Multi-language support**: Extend beyond German language processing
 - **Custom chunking strategies**: Semantic or speaker-based chunking
 - **Diagnostic differential generation**: Multiple potential diagnoses with probabilities
+- **Agentic reasoning traces**: Log agent tool usage for transparency
 
 ## Development
 
@@ -208,6 +234,13 @@ concisum/
 │   ├── agents.py       # Summarization agents
 │   └── models.py       # Summary data models
 └── diagnosis/
-    ├── agents.py       # Diagnosis generation agents
-    └── models.py       # Diagnosis data models
+    ├── agents.py       # Diagnosis generation agents (with RAG)
+    ├── models.py       # Diagnosis data models
+    ├── vectorstore.py  # ChromaDB vector store for ICD-10
+    └── tools.py        # Pydantic-AI RAG tools
+data/
+├── icd10_sample.json   # Sample ICD-10 F-codes with criteria
+└── icd10_db/           # ChromaDB persistence (gitignored)
+scripts/
+└── init_vectorstore.py # Initialize vector database
 ```

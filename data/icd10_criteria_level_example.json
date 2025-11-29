@@ -1,0 +1,141 @@
+{
+  "metadata": {
+    "granularity": "criteria_level",
+    "version": "2.0",
+    "description": "Example of criteria-level structuring for better retrieval with small models"
+  },
+  "entries": [
+    {
+      "id": "F32.1_overview",
+      "type": "diagnosis_summary",
+      "code": "F32.1",
+      "title": "Mittelgradige depressive Episode",
+      "description": "Eine depressive Episode mit mindestens zwei Hauptsymptomen und mindestens drei bis vier Zusatzsymptomen, bei der erhebliche Schwierigkeiten bestehen, alltägliche Aktivitäten fortzusetzen.",
+      "severity": "moderate",
+      "chapter": "F30-F39"
+    },
+    {
+      "id": "F32.1_C1",
+      "type": "criterion",
+      "code": "F32.1",
+      "diagnosis_title": "Mittelgradige depressive Episode",
+      "criterion_number": 1,
+      "criterion_category": "main_symptoms",
+      "criterion_text": "Mindestens zwei der drei Hauptsymptome: Depressive Stimmung, Interessenverlust/Freudlosigkeit, verminderter Antrieb/erhöhte Ermüdbarkeit",
+      "required": true,
+      "related_symptoms": ["depressive Stimmung", "Anhedonie", "Interessenverlust", "Antriebsmangel", "Ermüdbarkeit"],
+      "clinical_markers": ["niedergeschlagen", "traurig", "lustlos", "erschöpft", "energielos"]
+    },
+    {
+      "id": "F32.1_C2",
+      "type": "criterion",
+      "code": "F32.1",
+      "diagnosis_title": "Mittelgradige depressive Episode",
+      "criterion_number": 2,
+      "criterion_category": "additional_symptoms",
+      "criterion_text": "Mindestens drei bis vier Zusatzsymptome: Verminderte Konzentration, vermindertes Selbstwertgefühl, Schuldgefühle, pessimistische Zukunftsperspektive, Suizidgedanken/-handlungen, Schlafstörungen, verminderter Appetit",
+      "required": true,
+      "related_symptoms": ["Konzentrationsstörungen", "Selbstwertprobleme", "Schuldgefühle", "Hoffnungslosigkeit", "Suizidalität", "Insomnie", "Appetitverlust"],
+      "clinical_markers": ["kann mich nicht konzentrieren", "wertlos", "schuldig", "aussichtslos", "Selbstmordgedanken", "kann nicht schlafen", "kein Hunger"]
+    },
+    {
+      "id": "F32.1_C3",
+      "type": "criterion",
+      "code": "F32.1",
+      "diagnosis_title": "Mittelgradige depressive Episode",
+      "criterion_number": 3,
+      "criterion_category": "duration",
+      "criterion_text": "Dauer: Mindestens zwei Wochen",
+      "required": true,
+      "related_symptoms": ["anhaltend", "chronisch"],
+      "clinical_markers": ["seit Wochen", "dauert an", "geht nicht weg"]
+    },
+    {
+      "id": "F32.1_C4",
+      "type": "criterion",
+      "code": "F32.1",
+      "diagnosis_title": "Mittelgradige depressive Episode",
+      "criterion_number": 4,
+      "criterion_category": "functional_impairment",
+      "criterion_text": "Erhebliche Schwierigkeiten, alltägliche, soziale und berufliche Aktivitäten fortzusetzen",
+      "required": true,
+      "related_symptoms": ["Funktionseinschränkung", "soziale Probleme", "Arbeitsunfähigkeit"],
+      "clinical_markers": ["kann nicht mehr arbeiten", "bleibe zuhause", "ziehe mich zurück", "schaffe es nicht"]
+    },
+    {
+      "id": "F32.1_differential_F320",
+      "type": "differential",
+      "code": "F32.1",
+      "diagnosis_title": "Mittelgradige depressive Episode",
+      "differential_code": "F32.0",
+      "differential_title": "Leichte depressive Episode",
+      "key_difference": "Bei F32.0 können alltägliche Aktivitäten noch weitgehend fortgeführt werden, bei F32.1 bestehen erhebliche Schwierigkeiten"
+    },
+    {
+      "id": "F32.1_differential_F322",
+      "type": "differential",
+      "code": "F32.1",
+      "diagnosis_title": "Mittelgradige depressive Episode",
+      "differential_code": "F32.2",
+      "differential_title": "Schwere depressive Episode",
+      "key_difference": "Bei F32.2 sind ALLE drei Hauptsymptome vorhanden und Aktivitäten können gar nicht mehr fortgesetzt werden"
+    },
+    {
+      "id": "F41.2_overview",
+      "type": "diagnosis_summary",
+      "code": "F41.2",
+      "title": "Angst und depressive Störung, gemischt",
+      "description": "Gleichzeitiges Vorliegen von Angst und Depression, wobei keines von beiden eindeutig überwiegt.",
+      "severity": "mixed",
+      "chapter": "F40-F48"
+    },
+    {
+      "id": "F41.2_C1",
+      "type": "criterion",
+      "code": "F41.2",
+      "diagnosis_title": "Angst und depressive Störung, gemischt",
+      "criterion_number": 1,
+      "criterion_category": "symptom_presence",
+      "criterion_text": "Sowohl Angstsymptome als auch depressive Symptome sind vorhanden",
+      "required": true,
+      "related_symptoms": ["Angst", "Depression", "Sorgen", "Niedergeschlagenheit"],
+      "clinical_markers": ["ängstlich und traurig", "Sorgen und Hoffnungslosigkeit", "nervös und deprimiert"]
+    },
+    {
+      "id": "F41.2_C2",
+      "type": "criterion",
+      "code": "F41.2",
+      "diagnosis_title": "Angst und depressive Störung, gemischt",
+      "criterion_number": 2,
+      "criterion_category": "severity_threshold",
+      "criterion_text": "Keines der Syndrome ist schwer genug ausgeprägt, um eine eigenständige Diagnose einer Angststörung oder depressiven Episode zu rechtfertigen",
+      "required": true,
+      "related_symptoms": ["subklinisch", "unterschwellig"],
+      "clinical_markers": ["mal so mal so", "beides ein bisschen", "nicht richtig ausgeprägt"]
+    },
+    {
+      "id": "F41.2_C3",
+      "type": "criterion",
+      "code": "F41.2",
+      "diagnosis_title": "Angst und depressive Störung, gemischt",
+      "criterion_number": 3,
+      "criterion_category": "clinical_significance",
+      "criterion_text": "Beide Symptomgruppen sind klinisch bedeutsam",
+      "required": true,
+      "related_symptoms": ["Leidensdruck", "Beeinträchtigung"],
+      "clinical_markers": ["belastet mich", "schränkt ein", "leidet darunter"]
+    },
+    {
+      "id": "F41.2_C4",
+      "type": "criterion",
+      "code": "F41.2",
+      "diagnosis_title": "Angst und depressive Störung, gemischt",
+      "criterion_number": 4,
+      "criterion_category": "vegetative_symptoms",
+      "criterion_text": "Mindestens einige vegetative Symptome wie Tremor, Herzklopfen, Mundtrockenheit, Magenbeschwerden müssen vorhanden sein",
+      "required": true,
+      "related_symptoms": ["Zittern", "Herzrasen", "Mundtrockenheit", "Übelkeit"],
+      "clinical_markers": ["zittere", "Herz rast", "trockener Mund", "Magenschmerzen", "flau im Magen"]
+    }
+  ]
+}

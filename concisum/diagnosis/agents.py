@@ -1,9 +1,16 @@
 import logging
 from typing import List, Dict, Any
+from pathlib import Path
 
 from pydantic_ai import Agent
 
 from concisum.diagnosis.models import SymptomList, Diagnosis
+from concisum.diagnosis.vectorstore import ICD10VectorStore
+from concisum.diagnosis.tools import (
+    DiagnosisContext,
+    search_icd10_by_symptoms,
+    get_icd10_criteria,
+)
 from concisum.summary.models import Utterance
 from concisum.config import model
 
@@ -28,13 +35,25 @@ symptom_extractor = Agent(
 diagnosis_generator = Agent(
     model,
     output_type=Diagnosis,
+    deps_type=DiagnosisContext,
+    tools=[search_icd10_by_symptoms, get_icd10_criteria],
     instructions=(
         "Du bist ein psychiatrischer Experte für die Diagnoseerstellung nach ICD-10. "
         "Deine Aufgabe ist es, basierend auf einer Liste von Symptomen eine ICD-10-Diagnose (Kapitel V, F00-F99) "
-        "zu stellen. Überprüfe systematisch alle Diagnosekriterien und begründe deine Entscheidung fachlich korrekt. "
-        "Gib die vollständige ICD-10-Diagnose mit Code, Bezeichnung und ggf. Schweregrad an. Bei Komorbiditäten "
-        "nenne auch Nebendiagnosen. Berücksichtige die bereitgestellten Referenzinformationen zu ICD-10-Diagnosen, "
-        "um eine genaue und evidenzbasierte Diagnose zu erstellen. Stelle max. 3 Diagnosen."
+        "zu stellen. "
+        "\n\n"
+        "WICHTIG: Du hast Zugriff auf eine ICD-10 Datenbank über folgende Tools:\n"
+        "- search_icd10_by_symptoms: Suche nach relevanten Diagnosen basierend auf Symptombeschreibungen\n"
+        "- get_icd10_criteria: Hole die exakten diagnostischen Kriterien für einen bestimmten ICD-10 Code\n"
+        "\n"
+        "Gehe systematisch vor:\n"
+        "1. Nutze search_icd10_by_symptoms um Kandidatendiagnosen zu finden\n"
+        "2. Für die vielversprechendsten Kandidaten: Nutze get_icd10_criteria um die genauen Kriterien zu prüfen\n"
+        "3. Validiere systematisch, welche Kriterien durch die vorliegenden Symptome erfüllt sind\n"
+        "4. Wähle die passendste Diagnose und begründe deine Entscheidung fachlich korrekt\n"
+        "\n"
+        "Gib die vollständige ICD-10-Diagnose mit Code, Bezeichnung und ggf. Schweregrad an. "
+        "Bei Komorbiditäten nenne auch Nebendiagnosen. Stelle max. 3 Diagnosen."
     ),
 )
 
@@ -42,13 +61,35 @@ diagnosis_generator = Agent(
 class DiagnosisOrchestrator:
     """Orchestrates the process of extracting symptoms and generating diagnoses."""
 
-    def __init__(self, use_rag: bool = True):
+    def __init__(self, use_rag: bool = True, vectorstore_path: str = "./data/icd10_db"):
         """Initialize the DiagnosisOrchestrator.
 
         Args:
             use_rag: Whether to use the vector database (RAG) for diagnosis generation
+            vectorstore_path: Path to the vector database directory
         """
         self.use_rag = use_rag
+        self.vectorstore = None
+
+        if self.use_rag:
+            # Initialize vector store for RAG
+            try:
+                self.vectorstore = ICD10VectorStore(persist_dir=vectorstore_path)
+                logger.info(f"RAG enabled: Vector store initialized with {self.vectorstore.collection.count()} entries")
+
+                # Warn if vector store is empty
+                if self.vectorstore.collection.count() == 0:
+                    logger.warning(
+                        "Vector store is empty! Please run 'python scripts/init_vectorstore.py' "
+                        "to populate the database with ICD-10 data."
+                    )
+            except Exception as e:
+                logger.error(f"Failed to initialize vector store: {e}")
+                logger.warning("Falling back to non-RAG diagnosis generation")
+                self.use_rag = False
+                self.vectorstore = None
+        else:
+            logger.info("RAG disabled: Using model's parametric knowledge only")
 
     async def extract_symptoms_from_chunk(self, chunk: List[Utterance]) -> SymptomList:
         """Extract symptoms from a chunk of transcript utterances.
@@ -235,68 +276,57 @@ class DiagnosisOrchestrator:
                     continue
 
         symptom_text = "\n".join(symptom_text_parts)
-        query = f"Diagnose für folgende Symptome: {symptom_text}"
 
-        # Initialize reference_text
-        reference_text = ""
-
-        # Retrieve relevant diagnosis references if RAG is enabled
-        if self.use_rag:
-            pass
-            # Below is a first draft of how this could look:
-            # try:
-            #     reference_diagnoses = await retrieve_diagnoses(query, limit=3)
-            #     logger.info(f"Retrieved {len(reference_diagnoses)} diagnoses")
-            #     logger.info("Retrieved diagnoses from VectorDB: ")
-            #     for ref in reference_diagnoses:
-            #         logger.info(f"- {ref.get('title', 'Unbekannter Titel')}")
-
-            #     # Format references for prompt with safer access to fields
-            #     reference_text_parts = []
-            #     for ref in reference_diagnoses:
-            #         try:
-            #             code = ref.get("code", "Unbekannter Code")
-            #             title = ref.get("title", "Unbekannter Titel")
-            #             description = ref.get("description_short", "")
-            #             criteria = ref.get("criteria_text", "") or ref.get(
-            #                 "criteria", ""
-            #             )
-
-            #             ref_text = f"### {code} - {title}\n{description}\n\nDiagnosekriterien:\n{criteria}"
-            #             reference_text_parts.append(ref_text)
-            #         except Exception as e:
-            #             logger.warning(f"Error formatting reference: {str(e)}")
-            #             continue
-
-            #     reference_text = "\n\n".join(reference_text_parts)
-
-            #     # If no references were found, provide a fallback message
-            #     if not reference_text:
-            #         reference_text = "Keine Referenzdiagnosen verfügbar. Stelle bitte eine Diagnose basierend auf den klinischen Symptomen und deinem Fachwissen."
-            # except Exception as e:
-            #     logger.error(f"Error retrieving diagnoses: {str(e)}")
-            #     reference_text = "Keine Referenzdiagnosen verfügbar. Stelle bitte eine Diagnose basierend auf den klinischen Symptomen und deinem Fachwissen."
-        else:
-            logger.info(
-                "RAG disabled, generating diagnosis without reference information"
-            )
-            reference_text = "RAG wurde deaktiviert. Stelle bitte eine Diagnose basierend ausschließlich auf den klinischen Symptomen und deinem Fachwissen."
-
+        # Build prompt for diagnosis generation
         prompt = (
             "Erstelle eine psychiatrische Diagnose nach ICD-10 basierend auf folgenden Symptomen:\n\n"
             f"{symptom_text}\n\n"
-            "Berücksichtige dabei folgende Referenzinformationen zu möglichen Diagnosen:\n\n"
-            f"{reference_text}"
         )
+
+        if self.use_rag and self.vectorstore:
+            # Use RAG-enhanced diagnosis with tools
+            prompt += (
+                "WICHTIG: Nutze die verfügbaren Tools zur Suche in der ICD-10 Datenbank, "
+                "um die passendste Diagnose zu finden und die Kriterien zu validieren."
+            )
+        else:
+            # Fallback to parametric knowledge
+            logger.info("RAG disabled, generating diagnosis without reference information")
+            prompt += (
+                "Nutze dein klinisches Fachwissen, um eine Diagnose zu stellen. "
+                "Gib einen ICD-10 Code (F00-F99) mit vollständiger Begründung an."
+            )
 
         max_retries = 3
         retry_count = 0
 
         while retry_count < max_retries:
             try:
-                result = await diagnosis_generator.run(prompt)
-                logger.info(f"Generated diagnosis: {result.output.icd_10_diagnose}")
-                return result.output
+                # Create context with vectorstore if RAG is enabled
+                if self.use_rag and self.vectorstore:
+                    context = DiagnosisContext(
+                        vectorstore=self.vectorstore,
+                        symptoms=symptoms.symptoms
+                    )
+                    result = await diagnosis_generator.run(prompt, deps=context)
+                else:
+                    # Run without RAG tools
+                    # Create a simple non-RAG agent for this case
+                    from pydantic_ai import Agent
+                    simple_agent = Agent(
+                        model,
+                        output_type=Diagnosis,
+                        instructions=(
+                            "Du bist ein psychiatrischer Experte für die Diagnoseerstellung nach ICD-10. "
+                            "Erstelle eine Diagnose basierend auf den vorliegenden Symptomen. "
+                            "Gib einen ICD-10 Code (F00-F99), eine Begründung und eine Sicherheit (0-1) an."
+                        )
+                    )
+                    result = await simple_agent.run(prompt)
+
+                logger.info(f"Generated diagnosis: {result.data.icd_10_diagnose}")
+                return result.data
+
             except Exception as e:
                 retry_count += 1
                 logger.warning(
@@ -314,22 +344,6 @@ class DiagnosisOrchestrator:
                         icd_10_diagnose="F99 - Psychische Störung ohne nähere Angabe",
                         icd_10_begruendung="Eine genauere Diagnose konnte aufgrund unzureichender oder nicht eindeutiger Symptome nicht gestellt werden. Die vorliegenden Symptome deuten auf eine psychische Störung hin, aber die genaue Natur der Störung konnte nicht bestimmt werden.",
                         icd_10_sicherheit=0.5,
-                    )
-
-                # Add slight variation to the prompt on retry
-                if retry_count == 1:
-                    prompt = (
-                        "Erstelle eine präzise psychiatrische Diagnose nach ICD-10 auf Basis dieser Symptome:\n\n"
-                        f"{symptom_text}\n\n"
-                        "Berücksichtige diese Referenzinformationen zu möglichen Diagnosen:\n\n"
-                        f"{reference_text}"
-                    )
-                elif retry_count == 2:
-                    # Simplify the task for the last attempt
-                    prompt = (
-                        "Als psychiatrischer Experte stelle eine kurze ICD-10-Diagnose (F-Kategorie) für diese Symptome:\n\n"
-                        f"{symptom_text}\n\n"
-                        "Gib einen ICD-10-Code mit Bezeichnung, eine kurze Begründung und eine Sicherheit zwischen 0 und 1 an."
                     )
 
         # This line ensures a return value on all code paths

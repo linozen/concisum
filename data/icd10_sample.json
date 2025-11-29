@@ -1,0 +1,151 @@
+{
+  "entries": [
+    {
+      "code": "F32.0",
+      "title": "Leichte depressive Episode",
+      "description": "Eine depressive Episode mit mindestens zwei Hauptsymptomen und mindestens zwei Zusatzsymptomen, bei der die Alltagsfunktionen noch weitgehend aufrechterhalten werden können.",
+      "criteria": [
+        "Mindestens zwei der drei Hauptsymptome: Depressive Stimmung, Interessenverlust/Freudlosigkeit, verminderter Antrieb/erhöhte Ermüdbarkeit",
+        "Mindestens zwei Zusatzsymptome: Verminderte Konzentration, vermindertes Selbstwertgefühl, Schuldgefühle, pessimistische Zukunftsperspektive, Suizidgedanken/-handlungen, Schlafstörungen, verminderter Appetit",
+        "Dauer: Mindestens zwei Wochen",
+        "Die Symptome verursachen klinisch bedeutsames Leiden, beeinträchtigen aber die Alltagsfunktionen noch nicht stark"
+      ],
+      "differential": ["F32.1", "F32.2", "F33", "F34.1", "F41.2"]
+    },
+    {
+      "code": "F32.1",
+      "title": "Mittelgradige depressive Episode",
+      "description": "Eine depressive Episode mit mindestens zwei Hauptsymptomen und mindestens drei bis vier Zusatzsymptomen, bei der erhebliche Schwierigkeiten bestehen, alltägliche Aktivitäten fortzusetzen.",
+      "criteria": [
+        "Mindestens zwei der drei Hauptsymptome: Depressive Stimmung, Interessenverlust/Freudlosigkeit, verminderter Antrieb/erhöhte Ermüdbarkeit",
+        "Mindestens drei bis vier Zusatzsymptome: Verminderte Konzentration, vermindertes Selbstwertgefühl, Schuldgefühle, pessimistische Zukunftsperspektive, Suizidgedanken/-handlungen, Schlafstörungen, verminderter Appetit",
+        "Dauer: Mindestens zwei Wochen",
+        "Erhebliche Schwierigkeiten, alltägliche, soziale und berufliche Aktivitäten fortzusetzen"
+      ],
+      "differential": ["F32.0", "F32.2", "F33.1", "F34.1", "F41.2"]
+    },
+    {
+      "code": "F32.2",
+      "title": "Schwere depressive Episode ohne psychotische Symptome",
+      "description": "Eine schwere depressive Episode mit allen drei Hauptsymptomen und mindestens vier Zusatzsymptomen, oft mit somatischen Symptomen, ohne Wahnvorstellungen oder Halluzinationen.",
+      "criteria": [
+        "Alle drei Hauptsymptome: Depressive Stimmung, Interessenverlust/Freudlosigkeit, verminderter Antrieb/erhöhte Ermüdbarkeit",
+        "Mindestens vier Zusatzsymptome in besonders schwerer Ausprägung: Verminderte Konzentration, vermindertes Selbstwertgefühl, Schuldgefühle, pessimistische Zukunftsperspektive, Suizidgedanken/-handlungen, Schlafstörungen, verminderter Appetit",
+        "Dauer: Mindestens zwei Wochen (kann bei besonders schweren Symptomen verkürzt sein)",
+        "Soziale, berufliche oder häusliche Aktivitäten können nur noch sehr eingeschränkt oder gar nicht mehr fortgesetzt werden",
+        "Keine Wahnvorstellungen, Halluzinationen oder depressiver Stupor"
+      ],
+      "differential": ["F32.1", "F32.3", "F33.2", "F20", "F25"]
+    },
+    {
+      "code": "F33.1",
+      "title": "Rezidivierende depressive Störung, gegenwärtig mittelgradige Episode",
+      "description": "Wiederholte depressive Episoden, aktuell mittelgradig, mit Vorgeschichte mindestens einer früheren Episode.",
+      "criteria": [
+        "Gegenwärtig bestehen die Kriterien einer mittelgradigen depressiven Episode (F32.1)",
+        "In der Anamnese mindestens eine frühere depressive Episode (leicht, mittelgradig oder schwer) mit Dauer von mindestens zwei Wochen",
+        "Zwischen den Episoden liegt eine Remissionsphase von mindestens zwei Monaten ohne bedeutsame affektive Symptome",
+        "Niemals Episoden mit gehobener Stimmung oder gesteigertem Antrieb (Manie/Hypomanie)"
+      ],
+      "differential": ["F32.1", "F31", "F34.1", "F41.2"]
+    },
+    {
+      "code": "F41.0",
+      "title": "Panikstörung",
+      "description": "Wiederkehrende schwere Angstattacken (Panik), die nicht auf eine spezifische Situation oder Objekt beschränkt sind und oft spontan auftreten.",
+      "criteria": [
+        "Wiederholte Panikattacken, die nicht auf eine spezifische Situation oder besondere Umstände beschränkt sind",
+        "Panikattacken mit abruptem Beginn, Maximum innerhalb von Minuten, Dauer meist nur wenige Minuten",
+        "Mindestens vier der folgenden Symptome während einer Attacke: Palpitationen, Schwitzen, Zittern, Mundtrockenheit, Atembeschwerden, Beklemmungsgefühl, Thoraxschmerzen, Übelkeit, Schwindel, Derealisation/Depersonalisation, Angst vor Kontrollverlust, Angst zu sterben, Hitzewallungen, Taubheitsgefühle",
+        "Mindestens ein Monat mit anhaltender Sorge vor weiteren Attacken oder Verhaltensänderungen aufgrund der Attacken"
+      ],
+      "differential": ["F40.01", "F41.1", "F45.3", "F40.1", "I20"]
+    },
+    {
+      "code": "F41.1",
+      "title": "Generalisierte Angststörung",
+      "description": "Anhaltende, generalisierte und übertriebene Angst und Sorge über verschiedene Ereignisse und Aktivitäten.",
+      "criteria": [
+        "Zeitraum von mindestens sechs Monaten mit vorherrschender Anspannung, Besorgnis und Befürchtungen in Bezug auf alltägliche Ereignisse und Probleme",
+        "Mindestens vier Symptome aus: Motorische Spannung (Zittern, Muskelverspannung, Ruhelosigkeit, Müdigkeit), Vegetative Übererregbarkeit (Benommenheit, Schwitzen, Tachykardie, Mundtrockenheit, Oberbauchbeschwerden), Vigilität (Reizbarkeit, Konzentrationsschwierigkeiten, Einschlafstörungen, Schreckhaftigkeit)",
+        "Die Angst ist nicht auf bestimmte Situationen beschränkt (freifließende Angst)",
+        "Deutliches Leiden oder Beeinträchtigung der Lebensführung"
+      ],
+      "differential": ["F41.0", "F40", "F45.3", "F48.0", "E05"]
+    },
+    {
+      "code": "F41.2",
+      "title": "Angst und depressive Störung, gemischt",
+      "description": "Gleichzeitiges Vorliegen von Angst und Depression, wobei keines von beiden eindeutig überwiegt und beide nicht schwer genug für eine separate Diagnose sind.",
+      "criteria": [
+        "Sowohl Angstsymptome als auch depressive Symptome sind vorhanden",
+        "Keines der Syndrome ist schwer genug ausgeprägt, um eine eigenständige Diagnose einer Angststörung oder depressiven Episode zu rechtfertigen",
+        "Beide Symptomgruppen sind klinisch bedeutsam",
+        "Mindestens einige vegetative Symptome wie Tremor, Herzklopfen, Mundtrockenheit, Magenbeschwerden müssen vorhanden sein"
+      ],
+      "differential": ["F32", "F33", "F41.0", "F41.1", "F40"]
+    },
+    {
+      "code": "F43.1",
+      "title": "Posttraumatische Belastungsstörung (PTBS)",
+      "description": "Verzögerte oder protrahierte Reaktion auf ein belastendes Ereignis oder eine Situation außergewöhnlicher Bedrohung.",
+      "criteria": [
+        "Exposition gegenüber einem traumatischen Ereignis von außergewöhnlicher Bedrohung oder katastrophalem Ausmaß",
+        "Wiederholtes Erleben des Traumas in sich aufdrängenden Erinnerungen (Flashbacks), Träumen oder Alpträumen",
+        "Vermeidung von Umständen, die der Belastung ähneln oder damit assoziiert sind",
+        "Entweder Unfähigkeit, wichtige Aspekte des Traumas zu erinnern (psychogene Amnesie) oder anhaltende Symptome erhöhter psychischer Sensitivität (Schlafstörungen, Reizbarkeit, Konzentrationsstörungen, Hypervigilanz, Schreckhaftigkeit)",
+        "Beginn innerhalb von sechs Monaten nach dem Trauma"
+      ],
+      "differential": ["F43.0", "F62.0", "F41", "F32", "F44"]
+    },
+    {
+      "code": "F60.31",
+      "title": "Emotional instabile Persönlichkeitsstörung: Borderline-Typ",
+      "description": "Durchgehendes Muster von Instabilität in zwischenmenschlichen Beziehungen, Selbstbild und Affekten sowie deutlicher Impulsivität.",
+      "criteria": [
+        "Mindestens drei Kriterien der emotional instabilen Persönlichkeitsstörung: Tendenz zu impulsivem Handeln, Neigung zu Streitereien, Unfähigkeit Ärger zu kontrollieren, Schwierigkeiten langfristig zu planen",
+        "Zusätzlich mindestens zwei der folgenden: Störungen des Selbstbildes, chronische Gefühle von Leere, intensive aber instabile Beziehungen, selbstschädigendes Verhalten, wiederholte Suiziddrohungen",
+        "Beginn in der Adoleszenz oder im frühen Erwachsenenalter",
+        "Durchgehendes Muster über verschiedene Situationen hinweg"
+      ],
+      "differential": ["F60.3", "F34.0", "F31", "F43.1", "F60.4"]
+    },
+    {
+      "code": "F50.0",
+      "title": "Anorexia nervosa",
+      "description": "Selbst herbeigeführter Gewichtsverlust mit verzerrter Körperwahrnehmung und intensiver Furcht vor Gewichtszunahme.",
+      "criteria": [
+        "Körpergewicht mindestens 15% unter dem erwarteten Gewicht oder Body-Mass-Index von 17,5 oder weniger",
+        "Der Gewichtsverlust ist selbst herbeigeführt durch Vermeidung hochkalorischer Speisen, selbstinduziertes Erbrechen, Abführmittel, übermäßige körperliche Aktivität",
+        "Körperschemastörung in Form einer spezifischen psychischen Störung: Angst vor dem Dickwerden besteht als tiefverwurzelte überwertige Idee",
+        "Endokrine Störung: Amenorrhoe bei Frauen, Libido- und Potenzverlust bei Männern",
+        "Bei Beginn vor der Pubertät ist die Abfolge der pubertären Entwicklungsschritte verzögert oder gehemmt"
+      ],
+      "differential": ["F50.1", "F50.2", "F32", "F45", "E03"]
+    },
+    {
+      "code": "F20.0",
+      "title": "Paranoide Schizophrenie",
+      "description": "Schizophrenie mit vorherrschenden Halluzinationen oder Wahnvorstellungen, bei relativ erhaltener Affektivität und kognitiven Funktionen.",
+      "criteria": [
+        "Allgemeine Kriterien für Schizophrenie müssen erfüllt sein",
+        "Halluzinationen oder Wahnvorstellungen stehen im Vordergrund",
+        "Affektive Verflachung, Antriebsstörung, zerfahrene Sprache und katatone Symptome dürfen nicht im Vordergrund stehen",
+        "Die Symptome bestehen für mindestens einen Monat"
+      ],
+      "differential": ["F25", "F22", "F06.2", "F23", "F32.3"]
+    },
+    {
+      "code": "F45.0",
+      "title": "Somatisierungsstörung",
+      "description": "Wiederholte Darbietung körperlicher Symptome ohne ausreichende organische Ursache, trotz negativer Untersuchungsbefunde.",
+      "criteria": [
+        "Mindestens zwei Jahre anhaltende multiple und unterschiedliche körperliche Symptome, für die keine ausreichende somatische Erklärung gefunden wurde",
+        "Hartnäckige Weigerung, den Rat mehrerer Ärzte anzunehmen, dass für die Symptome keine körperliche Erklärung zu finden ist",
+        "Eine gewisse Beeinträchtigung familiärer und sozialer Funktionen, die auf die Art der Symptome und das resultierende Verhalten zurückzuführen ist",
+        "Symptome aus mindestens zwei der folgenden Gruppen: Gastrointestinale Symptome, kardiovaskuläre Symptome, urogenitale Symptome, Haut- und Schmerzsymptome"
+      ],
+      "differential": ["F45.1", "F45.4", "F68.1", "F32", "G62"]
+    }
+  ]
+}
