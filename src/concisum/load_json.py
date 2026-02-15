@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Dict, Any, Union
 import json
 
 from concisum.summary.models import Utterance, UtteranceList

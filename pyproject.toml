@@ -21,13 +21,14 @@ build-backend = "hatchling.build"
 [tool.hatch.build]
 packages = ["src/concisum"]
 
-[tool.pyright]
+[tool.basedpyright]
 venvPath = "."
 venv = ".venv"
+typeCheckingMode = "standard"
 
 [dependency-groups]
 dev = [
     "ruff>=0.8.6",
-    "pyright>=1.1.390",
+    "basedpyright>=1.29.0",
     "pytest>=8.3.5",
 ]

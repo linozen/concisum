@@ -229,13 +229,12 @@ class DiagnosisOrchestrator:
                 # Just use the string representation of the symptom as fallback
                 try:
                     symptom_text_parts.append(f"- {str(s)}")
-                except:
+                except Exception:
                     # If even that fails, just skip this symptom
                     logger.error(f"Could not process symptom: {type(s)}")
                     continue
 
         symptom_text = "\n".join(symptom_text_parts)
-        query = f"Diagnose für folgende Symptome: {symptom_text}"
 
         # Initialize reference_text
         reference_text = ""

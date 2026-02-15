@@ -3,8 +3,8 @@ import os
 
 import pytest
 
-from src.concisum.load_json import load_utterances_from_json, parse_utterance_list
-from src.concisum.summary.models import UtteranceList
+from concisum.load_json import load_utterances_from_json, parse_utterance_list
+from concisum.summary.models import UtteranceList
 
 
 def get_test_file_path(filename):
