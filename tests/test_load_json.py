@@ -1,9 +1,10 @@
 import json
 import os
+
 import pytest
 
-from concisum.load_json import parse_utterance_list, load_utterances_from_json
-from concisum.summary.models import UtteranceList
+from src.concisum.load_json import load_utterances_from_json, parse_utterance_list
+from src.concisum.summary.models import UtteranceList
 
 
 def get_test_file_path(filename):
