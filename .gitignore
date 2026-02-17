@@ -184,3 +184,6 @@ private/
 # private for now
 sources
 logs
+
+# Claude Code
+.claude/
