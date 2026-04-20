@@ -24,31 +24,79 @@ symptom_extractor = Agent(
     ),
 )
 
-# Agent for generating diagnoses using RAG
-diagnosis_generator = Agent(
-    model,
-    output_type=Diagnosis,
-    instructions=(
-        "Du bist ein psychiatrischer Experte für die Diagnoseerstellung nach ICD-10. "
-        "Deine Aufgabe ist es, basierend auf einer Liste von Symptomen eine ICD-10-Diagnose (Kapitel V, F00-F99) "
-        "zu stellen. Überprüfe systematisch alle Diagnosekriterien und begründe deine Entscheidung fachlich korrekt. "
-        "Gib die vollständige ICD-10-Diagnose mit Code, Bezeichnung und ggf. Schweregrad an. Bei Komorbiditäten "
-        "nenne auch Nebendiagnosen. Berücksichtige die bereitgestellten Referenzinformationen zu ICD-10-Diagnosen, "
-        "um eine genaue und evidenzbasierte Diagnose zu erstellen. Stelle max. 3 Diagnosen."
-    ),
-)
+
+def _create_diagnosis_agent(
+    tools: list[str] | None = None,
+    transcript_text: str = "",
+) -> Agent[None, Diagnosis]:
+    """Create a diagnosis agent with optional tools.
+
+    Args:
+        tools: List of tool names to enable. Supported: "icd10", "transcript".
+               If None or empty, the agent operates without tools.
+        transcript_text: Full formatted transcript text. Required when the
+                         "transcript" tool is enabled.
+    """
+    enabled = set(tools or [])
+
+    tool_hint = ""
+    if "icd10" in enabled:
+        tool_hint += (
+            "\n\nDir steht das Werkzeug 'lookup_icd10' zur Verfügung. "
+            "Nutze es, um diagnostische Kriterien nachzuschlagen, bevor du eine Diagnose stellst."
+        )
+    if "transcript" in enabled:
+        tool_hint += (
+            "\n\nDir steht das Werkzeug 'search_transcript' zur Verfügung. "
+            "Nutze es, um konkrete Belege im Originaltranskript zu finden und Zitate zu verifizieren."
+        )
+
+    agent: Agent[None, Diagnosis] = Agent(
+        model,
+        output_type=Diagnosis,
+        instructions=(
+            "Du bist ein psychiatrischer Experte für die Diagnoseerstellung nach ICD-10. "
+            "Deine Aufgabe ist es, basierend auf einer Liste von Symptomen eine ICD-10-Diagnose (Kapitel V, F00-F99) "
+            "zu stellen. Überprüfe systematisch alle Diagnosekriterien und begründe deine Entscheidung fachlich korrekt. "
+            "Gib die vollständige ICD-10-Diagnose mit Code, Bezeichnung und ggf. Schweregrad an. Bei Komorbiditäten "
+            "nenne auch Nebendiagnosen. Stelle max. 3 Diagnosen."
+            + tool_hint
+        ),
+    )
+
+    if "icd10" in enabled:
+        from concisum.tools import lookup_icd10
+        agent.tool_plain(lookup_icd10)
+        logger.info("Diagnosis agent: icd10 tool enabled")
+
+    if "transcript" in enabled:
+        from concisum.tools import make_search_transcript
+        agent.tool_plain(make_search_transcript(transcript_text))
+        logger.info("Diagnosis agent: transcript tool enabled")
+
+    return agent
 
 
 class DiagnosisOrchestrator:
     """Orchestrates the process of extracting symptoms and generating diagnoses."""
 
-    def __init__(self, use_rag: bool = True):
+    def __init__(
+        self,
+        tools: list[str] | None = None,
+        transcript_text: str = "",
+    ):
         """Initialize the DiagnosisOrchestrator.
 
         Args:
-            use_rag: Whether to use the vector database (RAG) for diagnosis generation
+            tools: List of tool names to enable for the diagnosis agent.
+                   Supported: "icd10", "transcript". Default: no tools.
+            transcript_text: Full formatted transcript. Required when
+                             "transcript" is in *tools*.
         """
-        self.use_rag = use_rag
+        self.tools = tools
+        self.diagnosis_agent = _create_diagnosis_agent(
+            tools=tools, transcript_text=transcript_text
+        )
 
     async def extract_symptoms_from_chunk(self, chunk: List[Utterance]) -> SymptomList:
         """Extract symptoms from a chunk of transcript utterances.
@@ -84,25 +132,20 @@ class DiagnosisOrchestrator:
                 return result.output
             except Exception as e:
                 retry_count += 1
-                if "Exceeded maximum retries" in str(e) and retry_count < max_retries:
-                    logger.warning(
-                        f"Validation failed, retrying ({retry_count}/{max_retries})..."
+                logger.warning(
+                    f"Symptom extraction failed ({retry_count}/{max_retries}): {e}"
+                )
+                if retry_count >= max_retries:
+                    logger.error(
+                        f"Failed to extract symptoms after {max_retries} attempts: {e}"
                     )
-                    # Add a slight variation to the prompt to encourage different output
-                    prompt = (
-                        "Bitte identifiziere alle psychischen Symptome aus folgendem Teil eines Therapiegesprächs. "
-                        "Achte auf klare und präzise Symptombeschreibungen:\n\n"
-                        f"{formatted_chunk}"
-                    )
-                else:
-                    if retry_count >= max_retries:
-                        logger.error(
-                            f"Failed to extract symptoms after {max_retries} attempts: {e}"
-                        )
-                        # Return empty symptom list on repeated failure
-                        return SymptomList(symptoms=[])
-                    else:
-                        raise
+                    return SymptomList(symptoms=[])
+                # Vary the prompt to encourage different output
+                prompt = (
+                    "Bitte identifiziere alle psychischen Symptome aus folgendem Teil eines Therapiegesprächs. "
+                    "Achte auf klare und präzise Symptombeschreibungen:\n\n"
+                    f"{formatted_chunk}"
+                )
 
         # This line ensures a return value on all code paths
         return SymptomList(symptoms=[])
@@ -206,7 +249,7 @@ class DiagnosisOrchestrator:
         return SymptomList(symptoms=list(unique_symptoms.values()))
 
     async def generate_diagnosis(self, symptoms: SymptomList) -> Diagnosis:
-        """Generate a diagnosis based on extracted symptoms using RAG.
+        """Generate a diagnosis based on extracted symptoms.
 
         Args:
             symptoms: List of extracted symptoms
@@ -214,78 +257,18 @@ class DiagnosisOrchestrator:
         Returns:
             Generated diagnosis
         """
-        # Create a search query from symptoms
         symptom_text_parts = []
         for s in symptoms.symptoms:
-            try:
-                # Handle case when description is missing
-                if hasattr(s, "description") and s.description:
-                    symptom_text_parts.append(f"- {s.name}: {s.description}")
-                else:
-                    # Ensure we have at least the name if description is missing
-                    symptom_text_parts.append(f"- {s.name}")
-            except Exception as e:
-                logger.warning(f"Error processing symptom: {str(e)}")
-                # Just use the string representation of the symptom as fallback
-                try:
-                    symptom_text_parts.append(f"- {str(s)}")
-                except Exception:
-                    # If even that fails, just skip this symptom
-                    logger.error(f"Could not process symptom: {type(s)}")
-                    continue
+            if hasattr(s, "description") and s.description:
+                symptom_text_parts.append(f"- {s.name}: {s.description}")
+            else:
+                symptom_text_parts.append(f"- {s.name}")
 
         symptom_text = "\n".join(symptom_text_parts)
 
-        # Initialize reference_text
-        reference_text = ""
-
-        # Retrieve relevant diagnosis references if RAG is enabled
-        if self.use_rag:
-            pass
-            # Below is a first draft of how this could look:
-            # try:
-            #     reference_diagnoses = await retrieve_diagnoses(query, limit=3)
-            #     logger.info(f"Retrieved {len(reference_diagnoses)} diagnoses")
-            #     logger.info("Retrieved diagnoses from VectorDB: ")
-            #     for ref in reference_diagnoses:
-            #         logger.info(f"- {ref.get('title', 'Unbekannter Titel')}")
-
-            #     # Format references for prompt with safer access to fields
-            #     reference_text_parts = []
-            #     for ref in reference_diagnoses:
-            #         try:
-            #             code = ref.get("code", "Unbekannter Code")
-            #             title = ref.get("title", "Unbekannter Titel")
-            #             description = ref.get("description_short", "")
-            #             criteria = ref.get("criteria_text", "") or ref.get(
-            #                 "criteria", ""
-            #             )
-
-            #             ref_text = f"### {code} - {title}\n{description}\n\nDiagnosekriterien:\n{criteria}"
-            #             reference_text_parts.append(ref_text)
-            #         except Exception as e:
-            #             logger.warning(f"Error formatting reference: {str(e)}")
-            #             continue
-
-            #     reference_text = "\n\n".join(reference_text_parts)
-
-            #     # If no references were found, provide a fallback message
-            #     if not reference_text:
-            #         reference_text = "Keine Referenzdiagnosen verfügbar. Stelle bitte eine Diagnose basierend auf den klinischen Symptomen und deinem Fachwissen."
-            # except Exception as e:
-            #     logger.error(f"Error retrieving diagnoses: {str(e)}")
-            #     reference_text = "Keine Referenzdiagnosen verfügbar. Stelle bitte eine Diagnose basierend auf den klinischen Symptomen und deinem Fachwissen."
-        else:
-            logger.info(
-                "RAG disabled, generating diagnosis without reference information"
-            )
-            reference_text = "RAG wurde deaktiviert. Stelle bitte eine Diagnose basierend ausschließlich auf den klinischen Symptomen und deinem Fachwissen."
-
         prompt = (
             "Erstelle eine psychiatrische Diagnose nach ICD-10 basierend auf folgenden Symptomen:\n\n"
-            f"{symptom_text}\n\n"
-            "Berücksichtige dabei folgende Referenzinformationen zu möglichen Diagnosen:\n\n"
-            f"{reference_text}"
+            f"{symptom_text}"
         )
 
         max_retries = 3
@@ -293,7 +276,7 @@ class DiagnosisOrchestrator:
 
         while retry_count < max_retries:
             try:
-                result = await diagnosis_generator.run(prompt)
+                result = await self.diagnosis_agent.run(prompt)
                 logger.info(f"Generated diagnosis: {result.output.icd_10_diagnose}")
                 return result.output
             except Exception as e:
@@ -319,9 +302,7 @@ class DiagnosisOrchestrator:
                 if retry_count == 1:
                     prompt = (
                         "Erstelle eine präzise psychiatrische Diagnose nach ICD-10 auf Basis dieser Symptome:\n\n"
-                        f"{symptom_text}\n\n"
-                        "Berücksichtige diese Referenzinformationen zu möglichen Diagnosen:\n\n"
-                        f"{reference_text}"
+                        f"{symptom_text}"
                     )
                 elif retry_count == 2:
                     # Simplify the task for the last attempt

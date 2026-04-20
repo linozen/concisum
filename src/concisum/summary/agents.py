@@ -49,27 +49,24 @@ class SummaryOrchestrator:
         chunk_size: int = 20,
         therapist_speaker_number: int = 0,
         generate_diagnosis: bool = False,
-        use_rag: bool = True,
+        tools: list[str] | None = None,
     ):
-        """
-        Initialize the summarizer with configurable chunk size.
+        """Initialize the summarizer with configurable chunk size.
 
         Args:
             chunk_size: Number of utterances per chunk
             therapist_speaker_number: Number of the speaker who is the therapist
             generate_diagnosis: Whether to generate a diagnosis alongside the summary
-            use_rag: Whether to use the vector database (RAG) for diagnosis generation
+            tools: List of tool names to enable for the diagnosis agent.
+                   Supported: "icd10", "transcript".
         """
         self.chunk_size = chunk_size
         self.therapist_speaker_number = therapist_speaker_number
         self.generate_diagnosis = generate_diagnosis
-        self.use_rag = use_rag
 
-        # Import here to avoid circular imports
-        if self.generate_diagnosis:
-            from concisum.diagnosis.agents import DiagnosisOrchestrator
-
-            self.diagnosis_orchestrator = DiagnosisOrchestrator(use_rag=self.use_rag)
+        self.tools = tools
+        # DiagnosisOrchestrator is created lazily in process_transcript()
+        # because the transcript tool needs the formatted transcript text.
 
     def _create_chunks(self, utterances: List[Utterance]) -> List[List[Utterance]]:
         """
@@ -153,7 +150,6 @@ class SummaryOrchestrator:
             f"{combined_summaries}"
         )
 
-        print(prompt)
         result = await full_summarizer.run(prompt)
 
         # Verify word count and try again if necessary
@@ -199,10 +195,20 @@ class SummaryOrchestrator:
 
         # Generate diagnosis if requested
         if self.generate_diagnosis:
-            LOG.info("Generating diagnosis from transcript...")
-            diagnosis_results = await self.diagnosis_orchestrator.process_transcript(
-                chunks
+            from concisum.diagnosis.agents import DiagnosisOrchestrator
+
+            # Build full transcript text for the transcript search tool
+            transcript_text = "\n".join(
+                self._format_chunk_for_prompt(chunk)
+                for chunk in chunks
             )
+
+            orchestrator = DiagnosisOrchestrator(
+                tools=self.tools,
+                transcript_text=transcript_text,
+            )
+            LOG.info("Generating diagnosis from transcript...")
+            diagnosis_results = await orchestrator.process_transcript(chunks)
             full_summary.diagnosis = diagnosis_results.get("diagnosis")
             full_summary.symptoms = diagnosis_results.get("symptoms")
             LOG.info("Diagnosis generation complete")

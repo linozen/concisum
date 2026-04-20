@@ -44,49 +44,34 @@ def validate_input_file(input_file: Path) -> None:
 
 
 async def summarize_transcript(
-    input_file: Path, with_diagnosis: bool = False, use_rag: bool = True
+    input_file: Path,
+    with_diagnosis: bool = False,
+    simple: bool = False,
+    tools: list[str] | None = None,
 ) -> FullSummary:
-    """
-    Summarize a transcript file using hierarchical processing.
-
-    Args:
-        input_file: Path to the input JSON transcript file
-        with_diagnosis: Whether to include diagnosis generation
-        use_rag: Whether to use the vector database (RAG) for diagnosis generation
-
-    Returns:
-        FullSummary object containing the complete transcript summary
-    """
-    # Load utterances from JSON file
+    """Summarize a transcript file."""
     utterance_list = load_utterances_from_json(input_file)
 
-    # Initialize the transcript summarizer
+    if simple:
+        from concisum.simple import simple_summarize
+        return await simple_summarize(utterance_list, with_diagnosis=with_diagnosis)
+
     summarizer = SummaryOrchestrator(
         chunk_size=50,
         therapist_speaker_number=1,
         generate_diagnosis=with_diagnosis,
-        use_rag=use_rag,
-    )  # Configurable chunk size
-
-    # Process the transcript through hierarchical summarization
-    full_summary = await summarizer.process_transcript(utterance_list)
-    return full_summary
+        tools=tools,
+    )
+    return await summarizer.process_transcript(utterance_list)
 
 
 def save_as_markdown(summary: FullSummary, output_path: Path) -> None:
-    """
-    Save the summary as a markdown file.
-
-    Args:
-        summary: FullSummary object containing the summary content
-        output_path: Path where the markdown file should be saved
-    """
+    """Save the summary as a markdown file."""
     markdown_content = f"""# Therapiesitzung Zusammenfassung
 
 {summary.content}
 """
 
-    # Add diagnosis information if available
     if summary.diagnosis:
         markdown_content += f"""
 
@@ -102,7 +87,6 @@ def save_as_markdown(summary: FullSummary, output_path: Path) -> None:
 {summary.diagnosis.icd_10_sicherheit:.2f}
 """
 
-    # Add symptoms if available
     if summary.symptoms and summary.symptoms.symptoms:
         markdown_content += "\n\n## Identifizierte Symptome\n"
         for symptom in summary.symptoms.symptoms:
@@ -112,6 +96,14 @@ def save_as_markdown(summary: FullSummary, output_path: Path) -> None:
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(markdown_content)
+
+    console.print(f"[green]Summary saved to:[/green] {output_path}")
+
+
+def save_as_json(summary: FullSummary, output_path: Path) -> None:
+    """Save the summary as a JSON file."""
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(summary.model_dump_json(indent=2))
 
     console.print(f"[green]Summary saved to:[/green] {output_path}")
 
@@ -129,7 +121,13 @@ def summarize(
         None,
         "--output",
         "-o",
-        help="Path to output markdown file (default: input_summary.md)",
+        help="Path to output file (default: input_summary.md or .json)",
+    ),
+    fmt: str = typer.Option(
+        "md",
+        "--format",
+        "-f",
+        help="Output format: md (markdown) or json",
     ),
     with_diagnosis: bool = typer.Option(
         False,
@@ -137,10 +135,17 @@ def summarize(
         "-d",
         help="Generate ICD-10 diagnosis from transcript",
     ),
-    no_rag: bool = typer.Option(
+    simple: bool = typer.Option(
         False,
-        "--no-rag",
-        help="Disable the use of the vector database (RAG) for diagnosis generation",
+        "--simple",
+        "-s",
+        help="Use single-prompt (non-agentic) processing instead of hierarchical pipeline",
+    ),
+    tools: Optional[str] = typer.Option(
+        None,
+        "--tools",
+        "-t",
+        help="Comma-separated list of tools to enable for diagnosis (e.g. 'icd10,transcript')",
     ),
     verbose: bool = typer.Option(
         False,
@@ -153,16 +158,12 @@ def summarize(
     Analyze therapy transcripts and generate summaries with ICD-10 diagnoses.
     """
     try:
-        # Setup logging
         setup_logging(verbose)
-
-        # Validate input file
         validate_input_file(input_file)
 
-        # Set output path
-        output_path = output or input_file.parent / f"{input_file.stem}_summary.md"
+        ext = ".json" if fmt == "json" else ".md"
+        output_path = output or input_file.parent / f"{input_file.stem}_summary{ext}"
 
-        # Read input file
         with console.status("[bold green]Reading transcript...[/bold green]"):
             utterances = load_utterances_from_json(input_file)
             if verbose:
@@ -175,17 +176,21 @@ def summarize(
         with console.status(
             "[bold green]Generating summary and diagnosis through hierarchical processing...[/bold green]"
         ):
-            # Run async summarization function with diagnosis if requested
+            tool_list = [t.strip() for t in tools.split(",")] if tools else None
             summary = asyncio.run(
                 summarize_transcript(
-                    input_file, with_diagnosis=with_diagnosis, use_rag=not no_rag
+                    input_file,
+                    with_diagnosis=with_diagnosis,
+                    simple=simple,
+                    tools=tool_list,
                 )
             )
 
-        # Save results
-        save_as_markdown(summary, output_path)
+        if fmt == "json":
+            save_as_json(summary, output_path)
+        else:
+            save_as_markdown(summary, output_path)
 
-        # Display summary preview
         console.print(
             Panel(
                 summary.content[:500] + "..."
