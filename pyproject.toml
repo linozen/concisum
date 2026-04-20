@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-concisum = "src.concisum.cli:main"
+concisum = "concisum.cli:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -31,4 +31,5 @@ dev = [
     "ruff>=0.8.6",
     "basedpyright>=1.29.0",
     "pytest>=8.3.5",
+    "spacy>=3.8.14",
 ]
