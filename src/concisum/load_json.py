@@ -20,11 +20,16 @@ def parse_utterance_list(file_path: str | Path) -> UtteranceList:
     utterances = []
 
     for utt in data.get("utterances", []):
-        # Handle both JSON formats
+        # Handle multiple JSON formats
         if "ref_text" in utt and "ref_spk" in utt:
             # Format: utterance .json from 'diarizationlm'
             text = utt["ref_text"]
             speaker = utt["ref_spk"].split()[0]  # Take the first speaker ID
+            utterances.append(Utterance(text=text, speaker=speaker))
+        elif "ref_text" in utt and "speaker" in utt:
+            # Format: ground truth .utt.json (ref_text + numeric speaker)
+            text = utt["ref_text"]
+            speaker = str(utt["speaker"])
             utterances.append(Utterance(text=text, speaker=speaker))
         elif "text" in utt and "speaker" in utt:
             # Format: regular whisper-generated .json file from verbatim

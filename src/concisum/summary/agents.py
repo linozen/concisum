@@ -23,10 +23,12 @@ chunk_summarizer = Agent(
     ),
 )
 
-# Agent for creating a comprehensive summary from individual chunk summaries
+# Agent for creating a comprehensive summary from individual chunk summaries.
+# Uses ChunkSummary (content-only) as output — diagnosis/symptoms are attached
+# by the orchestrator after a separate diagnosis pipeline, not by this agent.
 full_summarizer = Agent(
     model,
-    output_type=FullSummary,
+    output_type=ChunkSummary,
     system_prompt=(
         "Du bist ein Experte für die Zusammenfassung von psychotherapeutischen Sitzungen. "
         "Deine Aufgabe ist es, mehrere Teilzusammenfassungen zu einer kohärenten Gesamtzusammenfassung "
@@ -169,7 +171,8 @@ class SummaryOrchestrator:
             )
             result = await full_summarizer.run(prompt)
 
-        return result.output
+        # Wrap content-only result into FullSummary (diagnosis attached later by orchestrator)
+        return FullSummary(content=result.output.content)
 
     async def process_transcript(self, utterance_list: UtteranceList) -> FullSummary:
         """
