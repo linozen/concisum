@@ -5,6 +5,6 @@ from pydantic_ai.providers.openai import OpenAIProvider
 model = OpenAIModel(
     os.getenv("OLLAMA_MODEL", "gemma4:26b"),
     provider=OpenAIProvider(
-        base_url=os.getenv("OLLAMA_HOST", "http://localhost:11434/v1"), api_key="ollama"
+        base_url=os.getenv("OLLAMA_HOST", "http://100.64.0.21:11434/v1"), api_key="ollama"
     ),
 )
