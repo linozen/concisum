@@ -185,5 +185,8 @@ private/
 sources
 logs
 
+# Evaluation results (may contain PII from transcripts)
+results/
+
 # Claude Code
 .claude/
