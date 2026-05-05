@@ -12,6 +12,7 @@ LOG = logging.getLogger(__name__)
 chunk_summarizer = Agent(
     model,
     output_type=ChunkSummary,
+    retries=3,
     system_prompt=(
         "Du bist ein Experte für die Zusammenfassung von psychotherapeutischen Sitzungen. "
         "Deine Aufgabe ist es, Abschnitte eines Therapietranskripts zwischen "
@@ -29,6 +30,7 @@ chunk_summarizer = Agent(
 full_summarizer = Agent(
     model,
     output_type=ChunkSummary,
+    retries=3,
     system_prompt=(
         "Du bist ein Experte für die Zusammenfassung von psychotherapeutischen Sitzungen. "
         "Deine Aufgabe ist es, mehrere Teilzusammenfassungen zu einer kohärenten Gesamtzusammenfassung "
@@ -189,11 +191,13 @@ class SummaryOrchestrator:
 
         # Summarize each chunk
         chunk_summaries = []
-        for chunk in chunks:
+        for i, chunk in enumerate(chunks):
+            LOG.info(f"Summarizing chunk {i+1}/{len(chunks)}")
             summary = await self.summarize_chunk(chunk)
             chunk_summaries.append(summary)
 
         # Create comprehensive summary from chunk summaries
+        LOG.info("Generating final summary")
         full_summary = await self.summarize_full_transcript(chunk_summaries)
 
         # Generate diagnosis if requested
