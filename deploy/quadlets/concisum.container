@@ -1,0 +1,36 @@
+# Concisum quadlet — LLM summarization & ICD-10 diagnosis API
+#
+# Install: cp concisum.container ~/.config/containers/systemd/
+#          systemctl --user daemon-reload
+#          systemctl --user enable --now concisum.service
+#
+# Build:  podman build -t concisum:latest ~/concisum
+# Update: podman build -t concisum:latest ~/concisum && systemctl --user restart concisum
+
+[Unit]
+Description=Concisum — LLM summarization & ICD-10 diagnosis API
+After=thoth-pod.service
+Requires=thoth-pod.service
+
+[Container]
+Image=localhost/concisum:latest
+ContainerName=concisum
+Pod=thoth.pod
+
+# Ollama is on the host, reachable via host.containers.internal inside the pod
+Environment=OLLAMA_HOST=http://host.containers.internal:11434/v1
+Environment=OLLAMA_MODEL=qwen3:8b
+
+# Health check
+HealthCmd=curl -f http://localhost:8090/health
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+
+[Service]
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+
+[Install]
+WantedBy=default.target
