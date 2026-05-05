@@ -73,18 +73,31 @@ def save_as_markdown(summary: FullSummary, output_path: Path) -> None:
 """
 
     if summary.diagnosis:
+        d = summary.diagnosis
         markdown_content += f"""
 
 ## Diagnose
 
-### ICD-10 Diagnose
-{summary.diagnosis.icd_10_diagnose}
+### Hauptdiagnose
+**{d.hauptdiagnose.code}** — {d.hauptdiagnose.title}
+"""
+        if d.hauptdiagnose.severity:
+            markdown_content += f"Schweregrad: {d.hauptdiagnose.severity}\n"
 
+        if d.nebendiagnosen:
+            markdown_content += "\n### Nebendiagnosen\n"
+            for nd in d.nebendiagnosen:
+                markdown_content += f"- **{nd.code}** — {nd.title}"
+                if nd.severity:
+                    markdown_content += f" ({nd.severity})"
+                markdown_content += "\n"
+
+        markdown_content += f"""
 ### Begründung
-{summary.diagnosis.icd_10_begruendung}
+{d.begruendung}
 
 ### Diagnosesicherheit
-{summary.diagnosis.icd_10_sicherheit:.2f}
+{d.sicherheit:.2f}
 """
 
     if summary.symptoms and summary.symptoms.symptoms:
@@ -207,6 +220,23 @@ def summarize(
             console.print("[red]Traceback:[/red]")
             console.print(traceback.format_exc())
         raise typer.Exit(code=1)
+
+
+@app.command()
+def serve(
+    host: str = typer.Option("0.0.0.0", "--host", "-H", help="Bind address"),
+    port: int = typer.Option(8090, "--port", "-p", help="Bind port"),
+    reload: bool = typer.Option(False, "--reload", help="Auto-reload on code changes"),
+):
+    """Start the concisum API server."""
+    import uvicorn
+
+    uvicorn.run(
+        "concisum.api.app:app",
+        host=host,
+        port=port,
+        reload=reload,
+    )
 
 
 def main():
