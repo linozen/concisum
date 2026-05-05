@@ -23,18 +23,35 @@ class SymptomList(BaseModel):
     )
 
 
-class Diagnosis(BaseModel):
-    icd_10_diagnose: str = Field(
-        description="""Die vollständige ICD-10-Diagnose (Kapitel V, F00-F99) mit
-        Code, Bezeichnung und ggf. Schweregrad. Bei Komorbiditäten auch
-        Nebendiagnosen angeben.""",
+class ICD10Entry(BaseModel):
+    """A single ICD-10 diagnosis entry."""
+
+    code: str = Field(
+        description="Der ICD-10-Code (z.B. 'F32.1', 'F41.0'). Nur der Code, keine Bezeichnung."
     )
-    icd_10_begruendung: str = Field(
+    title: str = Field(
+        description="Die offizielle Bezeichnung der Diagnose (z.B. 'Mittelgradige depressive Episode')"
+    )
+    severity: str = Field(
+        description="Schweregrad falls zutreffend (z.B. 'leicht', 'mittelgradig', 'schwer'), sonst leer",
+        default="",
+    )
+
+
+class Diagnosis(BaseModel):
+    hauptdiagnose: ICD10Entry = Field(
+        description="Die Hauptdiagnose nach ICD-10 (Kapitel V, F00-F99)"
+    )
+    nebendiagnosen: List[ICD10Entry] = Field(
+        description="Liste der Nebendiagnosen (Komorbiditäten). Leer wenn keine vorhanden.",
+        default_factory=list,
+    )
+    begruendung: str = Field(
         description="""Eine diagnostische Begründung mit systematischer
         Überprüfung aller relevanten Diagnosekriterien. Belege jedes Kriterium
         mit konkreten Beispielen aus dem Gespräch.""",
     )
-    icd_10_sicherheit: float = Field(
+    sicherheit: float = Field(
         description="""Eine Bewertung der Sicherheit der Diagnose auf einer Skala von 0 bis 1,
         wobei 1 die höchste Sicherheit darstellt.""",
     )

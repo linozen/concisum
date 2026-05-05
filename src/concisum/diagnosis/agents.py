@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 
 from pydantic_ai import Agent
 
-from concisum.diagnosis.models import SymptomList, Diagnosis
+from concisum.diagnosis.models import SymptomList, Diagnosis, ICD10Entry
 from concisum.summary.models import Utterance
 from concisum.config import model
 
@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 symptom_extractor = Agent(
     model,
     output_type=SymptomList,
+    retries=3,
     instructions=(
         "Du bist ein Experte für die Identifikation psychologischer Symptome aus Therapietranskripten. "
         "Deine Aufgabe ist es, psychische Symptome aus einem Teil eines Therapietranskripts zu identifizieren "
@@ -54,12 +55,21 @@ def _create_diagnosis_agent(
     agent: Agent[None, Diagnosis] = Agent(
         model,
         output_type=Diagnosis,
+        retries=3,
         instructions=(
             "Du bist ein psychiatrischer Experte für die Diagnoseerstellung nach ICD-10. "
             "Deine Aufgabe ist es, basierend auf einer Liste von Symptomen eine ICD-10-Diagnose (Kapitel V, F00-F99) "
-            "zu stellen. Überprüfe systematisch alle Diagnosekriterien und begründe deine Entscheidung fachlich korrekt. "
-            "Gib die vollständige ICD-10-Diagnose mit Code, Bezeichnung und ggf. Schweregrad an. Bei Komorbiditäten "
-            "nenne auch Nebendiagnosen. Stelle max. 3 Diagnosen."
+            "zu stellen. Überprüfe systematisch alle Diagnosekriterien und begründe deine Entscheidung fachlich korrekt.\n\n"
+            "Deine Antwort MUSS exakt folgende Struktur haben:\n"
+            "- hauptdiagnose: Ein Objekt mit 'code' (z.B. 'F32.1'), 'title' (z.B. 'Mittelgradige depressive Episode'), "
+            "und 'severity' (z.B. 'mittelgradig', oder leer)\n"
+            "- nebendiagnosen: Eine Liste von Objekten mit gleicher Struktur (max. 3). Leere Liste wenn keine Komorbiditäten.\n"
+            "- begruendung: Fachliche Begründung mit Bezug auf die Diagnosekriterien\n"
+            "- sicherheit: Zahl zwischen 0.0 und 1.0\n\n"
+            "Beispiel:\n"
+            '{"hauptdiagnose": {"code": "F32.1", "title": "Mittelgradige depressive Episode", "severity": "mittelgradig"}, '
+            '"nebendiagnosen": [{"code": "F41.0", "title": "Panikstörung", "severity": ""}], '
+            '"begruendung": "Die Symptome ...", "sicherheit": 0.7}'
             + tool_hint
         ),
     )
@@ -268,16 +278,22 @@ class DiagnosisOrchestrator:
 
         prompt = (
             "Erstelle eine psychiatrische Diagnose nach ICD-10 basierend auf folgenden Symptomen:\n\n"
-            f"{symptom_text}"
+            f"{symptom_text}\n\n"
+            "Antworte mit: hauptdiagnose (code, title, severity), nebendiagnosen (Liste), begruendung, sicherheit (0-1)."
         )
 
         max_retries = 3
         retry_count = 0
+        fallback_entry = ICD10Entry(
+            code="F99",
+            title="Psychische Störung ohne nähere Angabe",
+            severity="",
+        )
 
         while retry_count < max_retries:
             try:
                 result = await self.diagnosis_agent.run(prompt)
-                logger.info(f"Generated diagnosis: {result.output.icd_10_diagnose}")
+                logger.info(f"Generated diagnosis: {result.output.hauptdiagnose.code} {result.output.hauptdiagnose.title}")
                 return result.output
             except Exception as e:
                 retry_count += 1
@@ -289,37 +305,33 @@ class DiagnosisOrchestrator:
                     logger.error(
                         f"Failed to generate diagnosis after {max_retries} attempts: {e}"
                     )
-                    # Return a default diagnosis as fallback
-                    from concisum.diagnosis.models import Diagnosis
-
                     return Diagnosis(
-                        icd_10_diagnose="F99 - Psychische Störung ohne nähere Angabe",
-                        icd_10_begruendung="Eine genauere Diagnose konnte aufgrund unzureichender oder nicht eindeutiger Symptome nicht gestellt werden. Die vorliegenden Symptome deuten auf eine psychische Störung hin, aber die genaue Natur der Störung konnte nicht bestimmt werden.",
-                        icd_10_sicherheit=0.5,
+                        hauptdiagnose=fallback_entry,
+                        nebendiagnosen=[],
+                        begruendung="Eine genauere Diagnose konnte aufgrund technischer Probleme nicht erstellt werden.",
+                        sicherheit=0.3,
                     )
 
                 # Add slight variation to the prompt on retry
                 if retry_count == 1:
                     prompt = (
                         "Erstelle eine präzise psychiatrische Diagnose nach ICD-10 auf Basis dieser Symptome:\n\n"
-                        f"{symptom_text}"
+                        f"{symptom_text}\n\n"
+                        "Antworte mit: hauptdiagnose (code, title, severity), nebendiagnosen (Liste), begruendung, sicherheit (0-1)."
                     )
                 elif retry_count == 2:
-                    # Simplify the task for the last attempt
                     prompt = (
-                        "Als psychiatrischer Experte stelle eine kurze ICD-10-Diagnose (F-Kategorie) für diese Symptome:\n\n"
+                        "Als psychiatrischer Experte stelle eine ICD-10-Diagnose (F-Kategorie) für diese Symptome:\n\n"
                         f"{symptom_text}\n\n"
-                        "Gib einen ICD-10-Code mit Bezeichnung, eine kurze Begründung und eine Sicherheit zwischen 0 und 1 an."
+                        'Beispiel-Format: {{"hauptdiagnose": {{"code": "F32.1", "title": "Mittelgradige depressive Episode", "severity": "mittelgradig"}}, '
+                        '"nebendiagnosen": [], "begruendung": "...", "sicherheit": 0.7}}'
                     )
 
-        # This line ensures a return value on all code paths
-        # Create a default diagnosis as fallback
-        from concisum.diagnosis.models import Diagnosis
-
         return Diagnosis(
-            icd_10_diagnose="F99 - Psychische Störung ohne nähere Angabe",
-            icd_10_begruendung="Eine genauere Diagnose konnte aufgrund technischer Probleme nicht erstellt werden.",
-            icd_10_sicherheit=0.3,
+            hauptdiagnose=fallback_entry,
+            nebendiagnosen=[],
+            begruendung="Eine genauere Diagnose konnte aufgrund technischer Probleme nicht erstellt werden.",
+            sicherheit=0.3,
         )
 
     async def process_transcript(self, chunks: List[List[Utterance]]) -> Dict[str, Any]:
