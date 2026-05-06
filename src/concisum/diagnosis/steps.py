@@ -50,7 +50,9 @@ class ExtractSymptomsStep(Step):
         params: dict[str, Any],
         on_progress: Callable[[str], None] | None = None,
     ) -> SymptomList:
-        from concisum.diagnosis.agents import symptom_extractor
+        from concisum.diagnosis.agents import make_symptom_extractor
+
+        symptom_extractor = make_symptom_extractor()
 
         max_symptoms = int(params.get("max_symptoms", 5))
         therapist = str(params.get("therapist_speaker", "0"))

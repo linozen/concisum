@@ -8,6 +8,7 @@ from typing import Any
 from litestar import Controller, Response, get, post
 
 from concisum.api.job_store import JobStatus, JobStore, StepProgress
+from concisum.config import set_active_model
 from concisum.pipeline import StepRegistry
 from concisum.pipeline.pipeline import PipelineExecutor
 
@@ -19,6 +20,7 @@ class RunRequest:
     template_id: str
     step_overrides: dict[str, dict[str, Any]] | None = None
     input_data: dict[str, Any] | None = None
+    model: str | None = None
 
 
 async def _run_pipeline(
@@ -27,8 +29,13 @@ async def _run_pipeline(
     input_data: dict[str, Any],
     step_overrides: dict[str, dict[str, Any]],
     job_store: JobStore,
+    model: str | None = None,
 ) -> None:
     try:
+        # Apply per-request model override; the contextvar is scoped to this
+        # asyncio.Task so concurrent requests don't interfere.
+        set_active_model(model)
+
         job_store.update_status(job_id, JobStatus.PROCESSING)
         template = StepRegistry.get_template(template_id)
         executor = PipelineExecutor(template, StepRegistry, job_store, job_id)
@@ -70,7 +77,12 @@ def _build_result(template_id: str, outputs: dict[str, Any]) -> dict[str, Any]:
         symptoms = outputs["symptoms"]
         result["symptoms"] = symptoms.model_dump() if hasattr(symptoms, "model_dump") else symptoms
 
-    # If no combine step (diagnosis_only), set content to None
+    # Topics from aggregate_topics step
+    if "aggregate_topics" in outputs:
+        topic_report = outputs["aggregate_topics"]
+        result["topics"] = topic_report.model_dump() if hasattr(topic_report, "model_dump") else topic_report
+
+    # If no combine step (diagnosis_only, topic_modelling), set content to None
     if "content" not in result:
         result["content"] = None
 
@@ -132,6 +144,7 @@ class PipelineController(Controller):
                 data.input_data or {},
                 data.step_overrides or {},
                 job_store,
+                data.model,
             )
         )
 

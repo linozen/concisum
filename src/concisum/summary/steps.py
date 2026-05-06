@@ -100,7 +100,11 @@ class SummarizeChunksStep(Step):
         params: dict[str, Any],
         on_progress: Callable[[str], None] | None = None,
     ) -> list[ChunkSummary]:
-        from concisum.summary.agents import chunk_summarizer
+        from concisum.summary.agents import make_chunk_summarizer
+
+        # Build a fresh agent per call so per-request model overrides
+        # (concisum.config.set_active_model) are honored.
+        chunk_summarizer = make_chunk_summarizer()
 
         therapist = str(params.get("therapist_speaker", "0"))
         chunks: list[list[Utterance]] = input_data
@@ -156,7 +160,9 @@ class CombineSummariesStep(Step):
         params: dict[str, Any],
         on_progress: Callable[[str], None] | None = None,
     ) -> FullSummary:
-        from concisum.summary.agents import full_summarizer
+        from concisum.summary.agents import make_full_summarizer
+
+        full_summarizer = make_full_summarizer()
 
         max_words = int(params.get("max_words", 300))
         chunk_summaries: list[ChunkSummary] = input_data

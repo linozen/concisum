@@ -2,45 +2,56 @@ import logging
 from typing import List
 
 from pydantic_ai import Agent
+from pydantic_ai.models.openai import OpenAIModel
 
 from concisum.summary.models import Utterance, UtteranceList, ChunkSummary, FullSummary
-from concisum.config import model
+from concisum.config import build_model
 
 LOG = logging.getLogger(__name__)
 
-# Agent for summarizing individual chunks of transcript text
-chunk_summarizer = Agent(
-    model,
-    output_type=ChunkSummary,
-    retries=3,
-    system_prompt=(
-        "Du bist ein Experte für die Zusammenfassung von psychotherapeutischen Sitzungen. "
-        "Deine Aufgabe ist es, Abschnitte eines Therapietranskripts zwischen "
-        "exakt EINER Therapeut*in und exakt EINER Klient*in zusammenzufassen. "
-        "Konzentriere dich auf die wichtigsten Inhalte, Themen und Interventionen. "
-        "Behalte wichtige Gefühle, Gedanken und Verhaltensweisen bei. "
-        "Verfasse die Zusammenfassung auf Deutsch in der dritten Person und in einem professionellen Ton. "
-        "Die Zusammenfassung sollte prägnant aber informativ sein."
-    ),
-)
 
-# Agent for creating a comprehensive summary from individual chunk summaries.
-# Uses ChunkSummary (content-only) as output — diagnosis/symptoms are attached
-# by the orchestrator after a separate diagnosis pipeline, not by this agent.
-full_summarizer = Agent(
-    model,
-    output_type=ChunkSummary,
-    retries=3,
-    system_prompt=(
-        "Du bist ein Experte für die Zusammenfassung von psychotherapeutischen Sitzungen. "
-        "Deine Aufgabe ist es, mehrere Teilzusammenfassungen zu einer kohärenten Gesamtzusammenfassung "
-        "zu kombinieren. Erstelle eine strukturierte, zusammenhängende Zusammenfassung der gesamten Therapiesitzung. "
-        "Die Zusammenfassung sollte einen klaren Überblick über die wichtigsten Themen, therapeutischen Interventionen "
-        "und den Verlauf der Sitzung geben. Identifiziere Muster und wichtige Momente. "
-        "Verfasse die Zusammenfassung in der dritten Person und in einem professionellen Ton. "
-        "Die Gesamtzusammenfassung MUSS weniger als 250 Wörter enthalten."
-    ),
-)
+def make_chunk_summarizer(
+    model: OpenAIModel | None = None,
+) -> Agent[None, ChunkSummary]:
+    """Build a per-call agent for chunk-level summarization.
+
+    Builds a fresh Agent every call so that per-request model overrides
+    (set via concisum.config.set_active_model) are honored.
+    """
+    return Agent(
+        model or build_model(),
+        output_type=ChunkSummary,
+        retries=3,
+        system_prompt=(
+            "Du bist ein Experte für die Zusammenfassung von psychotherapeutischen Sitzungen. "
+            "Deine Aufgabe ist es, Abschnitte eines Therapietranskripts zwischen "
+            "exakt EINER Therapeut*in und exakt EINER Klient*in zusammenzufassen. "
+            "Konzentriere dich auf die wichtigsten Inhalte, Themen und Interventionen. "
+            "Behalte wichtige Gefühle, Gedanken und Verhaltensweisen bei. "
+            "Verfasse die Zusammenfassung auf Deutsch in der dritten Person und in einem professionellen Ton. "
+            "Die Zusammenfassung sollte prägnant aber informativ sein."
+        ),
+    )
+
+
+def make_full_summarizer(
+    model: OpenAIModel | None = None,
+) -> Agent[None, ChunkSummary]:
+    """Build a per-call agent for combining chunk summaries into a final summary."""
+    return Agent(
+        model or build_model(),
+        output_type=ChunkSummary,
+        retries=3,
+        system_prompt=(
+            "Du bist ein Experte für die Zusammenfassung von psychotherapeutischen Sitzungen. "
+            "Deine Aufgabe ist es, mehrere Teilzusammenfassungen zu einer kohärenten Gesamtzusammenfassung "
+            "zu kombinieren. Erstelle eine strukturierte, zusammenhängende Zusammenfassung der gesamten Therapiesitzung. "
+            "Die Zusammenfassung sollte einen klaren Überblick über die wichtigsten Themen, therapeutischen Interventionen "
+            "und den Verlauf der Sitzung geben. Identifiziere Muster und wichtige Momente. "
+            "Verfasse die Zusammenfassung in der dritten Person und in einem professionellen Ton. "
+            "Die Gesamtzusammenfassung MUSS weniger als 250 Wörter enthalten."
+        ),
+    )
 
 
 class SummaryOrchestrator:
@@ -54,6 +65,7 @@ class SummaryOrchestrator:
         therapist_speaker_number: int = 0,
         generate_diagnosis: bool = False,
         tools: list[str] | None = None,
+        model: OpenAIModel | None = None,
     ):
         """Initialize the summarizer with configurable chunk size.
 
@@ -63,12 +75,17 @@ class SummaryOrchestrator:
             generate_diagnosis: Whether to generate a diagnosis alongside the summary
             tools: List of tool names to enable for the diagnosis agent.
                    Supported: "icd10", "transcript".
+            model: Optional model override. Defaults to the active contextvar
+                   or the OLLAMA_MODEL env var (see concisum.config.build_model).
         """
         self.chunk_size = chunk_size
         self.therapist_speaker_number = therapist_speaker_number
         self.generate_diagnosis = generate_diagnosis
 
         self.tools = tools
+        self._model = model
+        self._chunk_summarizer = make_chunk_summarizer(model)
+        self._full_summarizer = make_full_summarizer(model)
         # DiagnosisOrchestrator is created lazily in process_transcript()
         # because the transcript tool needs the formatted transcript text.
 
@@ -123,7 +140,7 @@ class SummaryOrchestrator:
             f"{formatted_chunk}"
         )
 
-        result = await chunk_summarizer.run(prompt)
+        result = await self._chunk_summarizer.run(prompt)
         return result.output
 
     async def summarize_full_transcript(
@@ -154,7 +171,7 @@ class SummaryOrchestrator:
             f"{combined_summaries}"
         )
 
-        result = await full_summarizer.run(prompt)
+        result = await self._full_summarizer.run(prompt)
 
         # Verify word count and try again if necessary
         words = result.output.content.split()
@@ -171,7 +188,7 @@ class SummaryOrchestrator:
                 "und ist zu lang:\n\n"
                 f"{result.output.content}"
             )
-            result = await full_summarizer.run(prompt)
+            result = await self._full_summarizer.run(prompt)
 
         # Wrap content-only result into FullSummary (diagnosis attached later by orchestrator)
         return FullSummary(content=result.output.content)
@@ -213,6 +230,7 @@ class SummaryOrchestrator:
             orchestrator = DiagnosisOrchestrator(
                 tools=self.tools,
                 transcript_text=transcript_text,
+                model=self._model,
             )
             LOG.info("Generating diagnosis from transcript...")
             diagnosis_results = await orchestrator.process_transcript(chunks)

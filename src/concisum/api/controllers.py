@@ -21,6 +21,7 @@ class CreateJobRequest:
     tools: list[str] | None = None
     chunk_size: int = 50
     therapist_speaker_number: int = 1
+    model: str | None = None
 
 
 class JobController(Controller):
@@ -79,6 +80,7 @@ class JobController(Controller):
                 input_data,
                 step_overrides,
                 job_store,
+                data.model,
             )
         )
 

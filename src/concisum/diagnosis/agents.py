@@ -2,33 +2,39 @@ import logging
 from typing import List, Dict, Any
 
 from pydantic_ai import Agent
+from pydantic_ai.models.openai import OpenAIModel
 
 from concisum.diagnosis.models import SymptomList, Diagnosis, ICD10Entry
 from concisum.summary.models import Utterance
-from concisum.config import model
+from concisum.config import build_model
 
 logger = logging.getLogger(__name__)
 
-# Agent for extracting symptoms from transcript chunks
-symptom_extractor = Agent(
-    model,
-    output_type=SymptomList,
-    retries=3,
-    instructions=(
-        "Du bist ein Experte für die Identifikation psychologischer Symptome aus Therapietranskripten. "
-        "Deine Aufgabe ist es, psychische Symptome aus einem Teil eines Therapietranskripts zu identifizieren "
-        "und zu extrahieren. Identifiziere alle Symptome, die auf psychische Erkrankungen hindeuten könnten. "
-        "Beachte klinisch relevante Anzeichen wie Stimmungsprobleme, kognitive Veränderungen, Verhaltensmuster, "
-        "physiologische Symptome und soziale Beeinträchtigungen. "
-        "Für jedes Symptom gib den Namen, eine kurze Beschreibung und einen konkreten Beleg aus dem Text an. "
-        "Sei präzise und halte dich an klinisch anerkannte Symptombeschreibungen."
-    ),
-)
+
+def make_symptom_extractor(
+    model: OpenAIModel | None = None,
+) -> Agent[None, SymptomList]:
+    """Build a per-call agent for extracting symptoms from a transcript chunk."""
+    return Agent(
+        model or build_model(),
+        output_type=SymptomList,
+        retries=3,
+        instructions=(
+            "Du bist ein Experte für die Identifikation psychologischer Symptome aus Therapietranskripten. "
+            "Deine Aufgabe ist es, psychische Symptome aus einem Teil eines Therapietranskripts zu identifizieren "
+            "und zu extrahieren. Identifiziere alle Symptome, die auf psychische Erkrankungen hindeuten könnten. "
+            "Beachte klinisch relevante Anzeichen wie Stimmungsprobleme, kognitive Veränderungen, Verhaltensmuster, "
+            "physiologische Symptome und soziale Beeinträchtigungen. "
+            "Für jedes Symptom gib den Namen, eine kurze Beschreibung und einen konkreten Beleg aus dem Text an. "
+            "Sei präzise und halte dich an klinisch anerkannte Symptombeschreibungen."
+        ),
+    )
 
 
 def _create_diagnosis_agent(
     tools: list[str] | None = None,
     transcript_text: str = "",
+    model: OpenAIModel | None = None,
 ) -> Agent[None, Diagnosis]:
     """Create a diagnosis agent with optional tools.
 
@@ -37,6 +43,7 @@ def _create_diagnosis_agent(
                If None or empty, the agent operates without tools.
         transcript_text: Full formatted transcript text. Required when the
                          "transcript" tool is enabled.
+        model: Optional model override; defaults to active contextvar / env.
     """
     enabled = set(tools or [])
 
@@ -53,7 +60,7 @@ def _create_diagnosis_agent(
         )
 
     agent: Agent[None, Diagnosis] = Agent(
-        model,
+        model or build_model(),
         output_type=Diagnosis,
         retries=3,
         instructions=(
@@ -94,6 +101,7 @@ class DiagnosisOrchestrator:
         self,
         tools: list[str] | None = None,
         transcript_text: str = "",
+        model: OpenAIModel | None = None,
     ):
         """Initialize the DiagnosisOrchestrator.
 
@@ -102,11 +110,13 @@ class DiagnosisOrchestrator:
                    Supported: "icd10", "transcript". Default: no tools.
             transcript_text: Full formatted transcript. Required when
                              "transcript" is in *tools*.
+            model: Optional model override; defaults to active contextvar / env.
         """
         self.tools = tools
         self.diagnosis_agent = _create_diagnosis_agent(
-            tools=tools, transcript_text=transcript_text
+            tools=tools, transcript_text=transcript_text, model=model
         )
+        self._symptom_extractor = make_symptom_extractor(model)
 
     async def extract_symptoms_from_chunk(self, chunk: List[Utterance]) -> SymptomList:
         """Extract symptoms from a chunk of transcript utterances.
@@ -135,7 +145,7 @@ class DiagnosisOrchestrator:
 
         while retry_count < max_retries:
             try:
-                result = await symptom_extractor.run(prompt)
+                result = await self._symptom_extractor.run(prompt)
                 logger.info(
                     f"Extracted {len(result.output.symptoms)} symptoms from chunk"
                 )
