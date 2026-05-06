@@ -185,8 +185,11 @@ private/
 sources
 logs
 
-# Evaluation results (may contain PII from transcripts)
+# Evaluation results and test data (may contain PII from transcripts)
 results/
+tests/data/anonymized/
+tests/data/anonymized_gt/
+tests/data/ground_truth/
 
 # Claude Code
 .claude/

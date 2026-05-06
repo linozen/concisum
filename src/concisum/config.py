@@ -4,7 +4,7 @@ from contextvars import ContextVar
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
-_DEFAULT_BASE_URL = os.getenv("OLLAMA_HOST", "http://100.64.0.21:11434/v1")
+_DEFAULT_BASE_URL = os.getenv("OLLAMA_HOST", "http://localhost:11434/v1")
 _DEFAULT_MODEL_NAME = os.getenv("OLLAMA_MODEL", "gemma4:26b")
 
 # Per-execution model override. Set by the API entrypoints (e.g. _run_pipeline)
